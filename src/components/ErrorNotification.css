@@ -1,0 +1,147 @@
+/* ErrorNotification styles */
+
+.error-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  max-width: 450px;
+  width: calc(100% - 40px);
+  z-index: 999;
+  transform: translateX(calc(100% + 40px));
+  transition: transform 0.3s ease-out;
+}
+
+.error-notification-visible {
+  transform: translateX(0);
+}
+
+.error-notification-content {
+  background: #2a2a2a;
+  border: 1px solid #ff4757;
+  border-left: 4px solid #ff4757;
+  border-radius: 6px;
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.error-notification-icon {
+  flex-shrink: 0;
+  color: #ff4757;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 2px;
+}
+
+.error-notification-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.error-notification-title {
+  color: #ff4757;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.error-notification-message {
+  color: #e0e0e0;
+  font-size: 14px;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.error-notification-details {
+  margin-top: 8px;
+}
+
+.error-notification-details details {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.error-notification-details summary {
+  color: #999;
+  cursor: pointer;
+  font-size: 12px;
+  user-select: none;
+}
+
+.error-notification-details summary:hover {
+  color: #fff;
+}
+
+.error-notification-details pre {
+  margin: 8px 0 0 0;
+  padding: 8px;
+  background: #1a1a1a;
+  border-radius: 4px;
+  color: #ff6b81;
+  font-size: 11px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.error-notification-actions {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.error-notification-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.error-notification-retry {
+  color: #5f27cd;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 8px;
+}
+
+.error-notification-retry:hover {
+  background: rgba(95, 39, 205, 0.1);
+  color: #6c3ce0;
+}
+
+.error-notification-close {
+  color: #999;
+  font-size: 24px;
+  line-height: 1;
+  width: 24px;
+  height: 24px;
+}
+
+.error-notification-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .error-notification {
+    top: 10px;
+    right: 10px;
+    width: calc(100% - 20px);
+  }
+  
+  .error-notification-content {
+    padding: 12px;
+  }
+}

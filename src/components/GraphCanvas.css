@@ -1,0 +1,184 @@
+.graph-canvas-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background-color: #1a1a1a;
+  border-radius: 4px;
+  overflow: hidden;
+  min-height: 500px;
+}
+
+/* Fullscreen mode */
+.graph-canvas-container.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  border-radius: 0;
+  min-height: 100vh;
+}
+
+/* Ensure NVL container fills the parent and is clickable */
+.graph-canvas-container > div:not(.graph-controls) {
+  width: 100% !important;
+  height: 100% !important;
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: auto !important;
+  z-index: 1; /* Below controls but above background */
+}
+
+/* Ensure canvas is clickable */
+.graph-canvas-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  pointer-events: auto !important;
+  cursor: grab;
+}
+
+.graph-canvas-container canvas:active {
+  cursor: grabbing;
+}
+
+/* Graph Controls - positioned above canvas */
+.graph-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 10; /* Above canvas (z-index: 1) but not too high */
+  pointer-events: none; /* Allow clicks to pass through the container */
+}
+
+/* Individual control buttons are clickable */
+.control-button {
+  width: 50px;
+  height: 50px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000000;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: auto; /* Buttons themselves are clickable */
+  backdrop-filter: blur(10px);
+}
+
+.control-button:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(102, 126, 234, 0.5);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.control-button:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  background: rgba(240, 240, 240, 1);
+}
+
+.control-button:focus-visible {
+  outline: 2px solid #667eea;
+  outline-offset: 3px;
+}
+
+.control-button svg {
+  pointer-events: none;
+  width: 38px;
+  height: 38px;
+  stroke-width: 2.5;
+  stroke: #000000;
+  color: #000000;
+}
+
+/* Fullscreen mode adjustments */
+.graph-canvas-container.fullscreen .graph-controls {
+  bottom: 30px;
+  right: 30px;
+}
+
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .graph-controls {
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+  }
+}
+
+@media (max-width: 768px) {
+  .graph-controls {
+    top: var(--spacing-sm);
+    right: var(--spacing-sm);
+    gap: var(--spacing-xs);
+  }
+  
+  .control-button,
+  .zoom-indicator {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .control-button svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .zoom-indicator {
+    font-size: 10px;
+  }
+  
+  .export-menu {
+    right: 44px;
+    min-width: 140px;
+  }
+  
+  .export-menu-item {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .graph-controls {
+    gap: 4px;
+  }
+  
+  .control-button,
+  .zoom-indicator {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .control-button svg {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .zoom-indicator {
+    font-size: 9px;
+  }
+  
+  .export-menu {
+    right: 40px;
+    min-width: 120px;
+  }
+  
+  .export-menu-item {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 12px;
+    gap: var(--spacing-xs);
+  }
+}

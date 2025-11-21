@@ -1,7 +1,6 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
 /.pnp
 .pnp.js
 
@@ -11,6 +10,7 @@
 # next.js
 /.next/
 /out/
+/dist/
 
 # production
 /build
@@ -34,3 +34,39 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# .gitignore for Vite.js projects
+
+# dependencies
+/node_modules/
+
+# production build
+/dist/
+
+# local env files
+.env
+.env.*.local
+
+# log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+*.log
+
+# editor directories and files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# system files
+Thumbs.db
+
