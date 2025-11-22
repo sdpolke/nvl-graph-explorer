@@ -1,0 +1,38 @@
+.statistics-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 2rem;
+}
+
+.empty-content {
+  text-align: center;
+  max-width: 500px;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.empty-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-message {
+  font-size: 1rem;
+  color: #7f8c8d;
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-suggestion {
+  font-size: 0.9rem;
+  color: #95a5a6;
+  margin: 0;
+  line-height: 1.5;
+}

@@ -1,0 +1,172 @@
+.statistics-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 2rem;
+}
+
+.error-content {
+  text-align: center;
+  max-width: 500px;
+}
+
+.error-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.error-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 0.5rem 0;
+}
+
+.error-message {
+  font-size: 1rem;
+  color: #e74c3c;
+  margin: 0 0 0.5rem 0;
+  font-weight: 500;
+}
+
+.error-help {
+  font-size: 0.9rem;
+  color: #7f8c8d;
+  margin: 0 0 1.5rem 0;
+  line-height: 1.5;
+}
+
+.error-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.retry-button,
+.cached-data-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.retry-button {
+  background-color: #3498db;
+  color: white;
+}
+
+.retry-button:hover {
+  background-color: #2980b9;
+  transform: translateY(-1px);
+}
+
+.retry-button:active {
+  transform: translateY(0);
+}
+
+.cached-data-button {
+  background-color: #95a5a6;
+  color: white;
+}
+
+.cached-data-button:hover {
+  background-color: #7f8c8d;
+  transform: translateY(-1px);
+}
+
+.cached-data-button:active {
+  transform: translateY(0);
+}
+
+/* Enhanced Focus Indicators */
+.retry-button:focus-visible,
+.cached-data-button:focus-visible {
+  outline: 3px solid #4a89dc;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px rgba(74, 137, 220, 0.2);
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .statistics-error {
+    border: 3px solid currentColor;
+  }
+
+  .retry-button,
+  .cached-data-button {
+    border: 2px solid currentColor;
+  }
+
+  .retry-button:hover {
+    background: #fff;
+    color: #000;
+  }
+
+  .cached-data-button:hover {
+    background: #000;
+    color: #fff;
+  }
+
+  .retry-button:focus-visible,
+  .cached-data-button:focus-visible {
+    outline-width: 4px;
+    outline-color: currentColor;
+  }
+
+  .error-message {
+    font-weight: 700;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .retry-button,
+  .cached-data-button {
+    transition: none;
+  }
+
+  .retry-button:hover,
+  .cached-data-button:hover,
+  .retry-button:active,
+  .cached-data-button:active {
+    transform: none;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .error-content {
+    max-width: 100%;
+    padding: 1rem;
+  }
+
+  .error-icon {
+    font-size: 3rem;
+  }
+
+  .error-title {
+    font-size: 1.25rem;
+  }
+
+  .error-message {
+    font-size: 0.9rem;
+  }
+
+  .error-help {
+    font-size: 0.85rem;
+  }
+
+  .retry-button,
+  .cached-data-button {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+  }
+}

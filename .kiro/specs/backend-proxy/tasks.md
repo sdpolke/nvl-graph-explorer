@@ -1,0 +1,162 @@
+# Backend Proxy - Implementation Tasks
+
+- [x] 1. Set up backend project structure
+  - Create `backend/` directory in project root
+  - Initialize Node.js project with `npm init`
+  - Install core dependencies: express, cors, dotenv, express-rate-limit
+  - Install Neo4j driver: neo4j-driver
+  - Install TypeScript and dev dependencies: typescript, @types/node, @types/express, @types/cors, ts-node, nodemon
+  - Create tsconfig.json with appropriate compiler options
+  - Set up build scripts in package.json (build, dev, start)
+  - Create directory structure: src/routes, src/services, src/middleware, src/types
+  - _Requirements: 6.4, 6.5_
+
+- [x] 2. Implement configuration and environment setup
+  - Create src/config/env.ts to load and validate environment variables
+  - Define ServerConfig interface with all configuration options
+  - Validate required environment variables on startup (Neo4j URI, credentials, OpenAI key)
+  - Set default values for optional configuration (port, rate limits, CORS origins)
+  - Export typed configuration object
+  - Create .env.example file with all required variables documented
+  - _Requirements: 1.1, 1.2, 1.4, 6.1, 6.2, 6.3_
+
+- [x] 3. Create Neo4j proxy service
+  - Create src/services/neo4jService.ts
+  - Implement Neo4jProxyService class with connection management
+  - Add connect() method to initialize Neo4j driver with server-side credentials
+  - Add disconnect() method for graceful shutdown
+  - Implement executeQuery() method to run Cypher queries
+  - Implement getSchema() method to fetch database schema
+  - Implement getNodeStatistics() method with APOC detection and pagination
+  - Implement getRelationshipStatistics() method with sampling support
+  - Add checkHealth() method for health checks
+  - Transform Neo4j native types (Integer, DateTime) to JSON-serializable types
+  - Add error handling and logging for all methods
+  - _Requirements: 1.1, 2.1, 2.2, 2.3, 2.5, 2.6_
+
+- [x] 4. Create OpenAI proxy service
+  - Create src/services/openaiService.ts
+  - Implement OpenAIProxyService class
+  - Add generateCypherQuery() method that calls OpenAI API with server-side key
+  - Add isConfigured() method to check if API key is present
+  - Implement error handling for OpenAI API failures
+  - Transform OpenAI responses to match expected format
+  - _Requirements: 1.2, 3.1, 3.2, 3.3, 3.4, 3.5_
+
+- [x] 5. Implement middleware
+  - Create src/middleware/rateLimiter.ts with express-rate-limit configuration
+  - Create src/middleware/errorHandler.ts for centralized error handling
+  - Create src/middleware/requestValidator.ts for request validation
+  - Implement payload size validation (1MB limit)
+  - Add request correlation ID generation
+  - Configure CORS middleware with environment-based origins
+  - Add request logging middleware with timestamp and client IP
+  - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 5.1, 5.2, 5.3, 5.5, 6.1, 6.2_
+
+- [x] 6. Create Neo4j route handlers
+  - Create src/routes/neo4j.ts
+  - Implement POST /api/neo4j/query endpoint
+  - Implement POST /api/neo4j/expand endpoint
+  - Implement POST /api/neo4j/schema endpoint
+  - Implement POST /api/neo4j/statistics/nodes endpoint
+  - Implement POST /api/neo4j/statistics/relationships endpoint
+  - Add request validation for each endpoint
+  - Add error handling that returns standardized error responses
+  - _Requirements: 2.1, 2.2, 2.3, 2.4, 4.1_
+
+- [x] 7. Create OpenAI route handlers
+  - Create src/routes/openai.ts
+  - Implement POST /api/openai/generate endpoint
+  - Add request validation for query and schema parameters
+  - Add error handling for OpenAI service failures
+  - Return standardized response format
+  - _Requirements: 3.1, 3.2, 3.3, 3.4_
+
+- [x] 8. Create health check endpoint
+  - Create src/routes/health.ts
+  - Implement GET /health endpoint
+  - Check Neo4j connectivity and measure response time
+  - Check OpenAI configuration status
+  - Return service status (healthy/degraded/unhealthy)
+  - Include uptime and timestamp in response
+  - Return HTTP 503 when Neo4j is unreachable
+  - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
+
+- [x] 9. Create server entry point
+  - Create src/server.ts
+  - Initialize Express application
+  - Load configuration from environment
+  - Register middleware (CORS, JSON parser, rate limiter, error handler)
+  - Register route handlers (/api/neo4j/*, /api/openai/*, /health)
+  - Connect to Neo4j on startup
+  - Start HTTP server on configured port
+  - Implement graceful shutdown (close Neo4j connection, stop server)
+  - Log server configuration on startup (excluding credentials)
+  - _Requirements: 1.4, 5.1, 5.4, 6.5_
+
+- [x] 10. Update frontend Neo4jService
+  - Update src/services/Neo4jService.ts in frontend
+  - Remove neo4j-driver import and direct driver usage
+  - Add proxyUrl configuration from environment variable
+  - Replace connect() method to remove driver initialization
+  - Update executeQuery() to POST to /api/neo4j/query
+  - Update expandNode() to POST to /api/neo4j/expand
+  - Update getSchema() to POST to /api/neo4j/schema
+  - Update getNodeStatistics() to POST to /api/neo4j/statistics/nodes
+  - Update getRelationshipStatistics() to POST to /api/neo4j/statistics/relationships
+  - Update checkApocAvailability() to use cached result from backend
+  - Maintain same method signatures and return types
+  - Update error handling to parse proxy error responses
+  - _Requirements: 8.1, 8.2, 8.3, 8.5_
+
+- [x] 11. Update frontend OpenAIService
+  - Update src/services/OpenAIService.ts in frontend
+  - Remove direct OpenAI API URL and key
+  - Add proxyUrl configuration from environment variable
+  - Update generateCypherQuery() to POST to /api/openai/generate
+  - Maintain same method signature and return type
+  - Update error handling to parse proxy error responses
+  - _Requirements: 8.1, 8.2, 8.4, 8.5_
+
+- [x] 12. Update environment configuration
+  - Update frontend .env file to add VITE_PROXY_URL
+  - Remove VITE_NEO4J_URI, VITE_NEO4J_USERNAME, VITE_NEO4J_PASSWORD from frontend .env
+  - Remove VITE_OPENAI_API_KEY from frontend .env
+  - Create backend .env file with all required variables
+  - Update .env.example files for both frontend and backend
+  - Update .gitignore to exclude backend .env
+  - _Requirements: 1.1, 1.2, 1.3, 6.1, 6.2, 6.3_
+
+- [x] 13. Add development scripts and documentation
+  - Update root package.json with scripts to run both frontend and backend
+  - Create backend/README.md with setup instructions
+  - Document all environment variables
+  - Document API endpoints with request/response examples
+  - Add instructions for running in development mode
+  - Add instructions for building and deploying
+  - Update main README.md with proxy setup instructions
+  - _Requirements: 6.4, 6.5_
+
+- [ ] 14. Create Docker configuration
+  - Create backend/Dockerfile for production builds
+  - Create docker-compose.yml for local development
+  - Configure environment variable passing
+  - Set up volume mounts for development
+  - Add health check configuration
+  - Document Docker deployment process
+  - _Requirements: 6.3_
+
+- [x] 15. Test proxy integration
+  - Start backend proxy server
+  - Start frontend development server
+  - Test Neo4j query execution through proxy
+  - Test node expansion through proxy
+  - Test schema fetching through proxy
+  - Test node statistics through proxy
+  - Test relationship statistics through proxy
+  - Test OpenAI query generation through proxy
+  - Test health check endpoint
+  - Test rate limiting by sending 150 requests
+  - Test error handling with invalid requests
+  - Verify credentials are not exposed in browser
+  - _Requirements: 1.3, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 4.4, 4.5, 7.1, 7.2_

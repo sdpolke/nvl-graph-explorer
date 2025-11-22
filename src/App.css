@@ -209,6 +209,13 @@
   }
 }
 
+/* Statistics fullscreen view */
+.statistics-fullscreen {
+  flex: 1;
+  overflow: auto;
+  background: var(--color-bg-primary);
+}
+
 /* Print Styles */
 @media print {
   .search-area,

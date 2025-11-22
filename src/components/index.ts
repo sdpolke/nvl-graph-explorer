@@ -8,3 +8,11 @@ export { QueryPanel } from './QueryPanel';
 export { ErrorModal } from './ErrorModal';
 export { ErrorNotification } from './ErrorNotification';
 export { Header } from './Header';
+export { StatisticsDashboard } from './StatisticsDashboard';
+export { StatisticsHeader } from './StatisticsHeader';
+export { StatisticsCharts } from './StatisticsCharts';
+export { NodeTypeTable } from './NodeTypeTable';
+export { StatisticsError } from './StatisticsError';
+export { StatisticsEmpty } from './StatisticsEmpty';
+export { StatisticsWarning } from './StatisticsWarning';
+

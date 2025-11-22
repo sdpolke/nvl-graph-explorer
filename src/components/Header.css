@@ -67,7 +67,42 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  gap: 0.75rem;
   flex: 1;
+}
+
+.statistics-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.statistics-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.statistics-button:active {
+  transform: translateY(0);
+}
+
+.statistics-button:focus-visible {
+  outline: 2px solid #74b9ff;
+  outline-offset: 2px;
+}
+
+.statistics-button svg {
+  flex-shrink: 0;
 }
 
 .burger-menu {
@@ -176,6 +211,14 @@
   .header-container {
     padding: 0.75rem 1rem;
   }
+  
+  .statistics-button span {
+    display: none;
+  }
+  
+  .statistics-button {
+    padding: 0.5rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -186,5 +229,15 @@
   .logo svg {
     width: 24px;
     height: 24px;
+  }
+  
+  .graph-stats {
+    font-size: 0.7rem;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .stat-value {
+    font-size: 0.75rem;
   }
 }

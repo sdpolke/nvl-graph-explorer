@@ -8,6 +8,8 @@ import { TabNavigation } from './components/TabNavigation';
 import { ResultsTable } from './components/ResultsTable';
 import { Header } from './components/Header';
 import { AggregationResults } from './components/AggregationResults';
+import { StatisticsDashboard } from './components/StatisticsDashboard';
+import { NodeDetailsPanel } from './components/NodeDetailsPanel';
 import { styleConfiguration } from './utils/styleConfig';
 import { neo4jService, openAIService } from './services';
 import type { Node, Relationship, GraphData } from './types';
@@ -23,6 +25,9 @@ function App() {
   const [activeTab, setActiveTab] = useState<'graph' | 'data' | 'results'>('graph');
   const [dbSchema, setDbSchema] = useState<string>('');
   const [aggregationResults, setAggregationResults] = useState<Record<string, any>[] | null>(null);
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [selectedRelationship, setSelectedRelationship] = useState<Relationship | null>(null);
+  const [showStatistics, setShowStatistics] = useState(false);
 
   // Calculate available labels and node counts from graph data
   const { availableLabels, nodeCounts } = useMemo(() => {
@@ -78,16 +83,16 @@ function App() {
     };
 
     init();
-    
+
     // Disconnect when page is closed/refreshed
     const handleUnload = () => {
       neo4jService.disconnect().catch(err => {
         console.error('Error disconnecting from Neo4j:', err);
       });
     };
-    
+
     window.addEventListener('beforeunload', handleUnload);
-    
+
     // Cleanup: only disconnect when truly unmounting (not in React Strict Mode double-render)
     return () => {
       cancelled = true;
@@ -100,11 +105,11 @@ function App() {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       // Initialize Neo4j driver and verify connectivity
       await neo4jService.connect();
       console.log('Successfully connected to Neo4j database');
-      
+
       // Fetch database schema for OpenAI context
       try {
         const schemaInfo = await neo4jService.getSchema();
@@ -113,10 +118,10 @@ function App() {
       } catch (schemaErr) {
         console.warn('Failed to fetch schema, will use default schema:', schemaErr);
       }
-      
+
       // Load initial graph data with default query
       await loadInitialData();
-      
+
       // Clear any previous errors on successful load
       setError(null);
     } catch (err: any) {
@@ -134,7 +139,7 @@ function App() {
       let data = await neo4jService.executeQuery(
         'MATCH (n:Protein) RETURN n LIMIT 1'
       );
-      
+
       // If no Protein nodes found, try to get any single node
       if (data.nodes.length === 0) {
         console.log('No Protein nodes found, trying to load any node...');
@@ -142,10 +147,10 @@ function App() {
           'MATCH (n) RETURN n LIMIT 1'
         );
       }
-      
+
       setGraphData(data);
       console.log(`Loaded ${data.nodes.length} initial node(s)`);
-      
+
       // Show a message if no data was found
       if (data.nodes.length === 0) {
         setError('No data found in the database. Please add some nodes to get started.');
@@ -160,7 +165,7 @@ function App() {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       let cypherQuery = query;
 
       // If natural language, convert to Cypher using OpenAI
@@ -184,7 +189,7 @@ function App() {
 
       // Execute the Cypher query
       const data = await neo4jService.executeQuery(cypherQuery);
-      
+
       // Handle aggregation results
       if (data.aggregationResults && data.aggregationResults.length > 0) {
         setAggregationResults(data.aggregationResults);
@@ -192,7 +197,7 @@ function App() {
       } else {
         setGraphData(data);
         setAggregationResults(null);
-        
+
         if (data.nodes.length === 0) {
           setError('No results found. Try a different query.');
         }
@@ -219,7 +224,7 @@ function App() {
 
       // Execute the Cypher query
       const data = await neo4jService.executeQuery(generatedQuery);
-      
+
       // Handle aggregation results
       if (data.aggregationResults && data.aggregationResults.length > 0) {
         setAggregationResults(data.aggregationResults);
@@ -227,7 +232,7 @@ function App() {
       } else {
         setGraphData(data);
         setAggregationResults(null);
-        
+
         if (data.nodes.length === 0) {
           setError('No results found. Try a different query.');
         }
@@ -254,10 +259,15 @@ function App() {
 
   const handleNodeClick = async (node: Node) => {
     console.log('Node clicked (expand):', node.id, node.properties.common_name || node.properties.name);
+    
+    // Show node details
+    setSelectedNode(node);
+    setSelectedRelationship(null);
+    
     try {
       setIsLoading(true);
       setError(null);
-      
+
       // Fetch connected nodes and relationships
       const expandedData = await neo4jService.expandNode(node.id);
       console.log('Expanded data received:', {
@@ -266,31 +276,31 @@ function App() {
         nodeIds: expandedData.nodes.map(n => n.id),
         relIds: expandedData.relationships.map(r => r.id)
       });
-      
+
       // Prevent duplicate nodes from being added
       const existingNodeIds = new Set(graphData.nodes.map(n => n.id));
       const newNodes = expandedData.nodes.filter(n => !existingNodeIds.has(n.id));
-      
+
       // Prevent duplicate relationships from being added
       const existingRelIds = new Set(graphData.relationships.map(r => r.id));
       const newRels = expandedData.relationships.filter(r => !existingRelIds.has(r.id));
-      
+
       console.log('After filtering duplicates:', {
         newNodes: newNodes.length,
         newRels: newRels.length,
         existingNodes: graphData.nodes.length,
         existingRels: graphData.relationships.length
       });
-      
+
       // Merge new nodes and relationships into existing graph data
       setGraphData({
         nodes: [...graphData.nodes, ...newNodes],
         relationships: [...graphData.relationships, ...newRels],
       });
-      
+
       // Log expansion results
       console.log(`✓ Expanded node: Added ${newNodes.length} nodes and ${newRels.length} relationships`);
-      
+
       // Show message if no new connections found
       if (newNodes.length === 0 && newRels.length === 0) {
         console.log('No new connections found - node may already be fully expanded');
@@ -309,27 +319,27 @@ function App() {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       // Fetch connected nodes and relationships
       const expandedData = await neo4jService.expandNode(node.id);
-      
+
       // Prevent duplicate nodes from being added
       const existingNodeIds = new Set(graphData.nodes.map(n => n.id));
       const newNodes = expandedData.nodes.filter(n => !existingNodeIds.has(n.id));
-      
+
       // Prevent duplicate relationships from being added
       const existingRelIds = new Set(graphData.relationships.map(r => r.id));
       const newRels = expandedData.relationships.filter(r => !existingRelIds.has(r.id));
-      
+
       // Merge new nodes and relationships into existing graph data
       setGraphData({
         nodes: [...graphData.nodes, ...newNodes],
         relationships: [...graphData.relationships, ...newRels],
       });
-      
+
       // Log expansion results
       console.log(`Expanded node ${node.id}: Added ${newNodes.length} nodes and ${newRels.length} relationships`);
-      
+
       // Show message if no new connections found
       if (newNodes.length === 0 && newRels.length === 0) {
         setError('No new connections found for this node.');
@@ -345,6 +355,8 @@ function App() {
 
   const handleRelationshipClick = (rel: Relationship) => {
     console.log('Relationship clicked:', rel);
+    setSelectedRelationship(rel);
+    setSelectedNode(null);
   };
 
   const handleLabelToggle = (label: string) => {
@@ -359,21 +371,34 @@ function App() {
 
   return (
     <GraphProvider>
-      <div className="app-container">
-        <Header 
-          nodeCount={graphData.nodes.length}
-          relationshipCount={graphData.relationships.length}
-        />
-        
+      {showStatistics ? (
+        <div className="app-container">
+          <Header
+            nodeCount={graphData.nodes.length}
+            relationshipCount={graphData.relationships.length}
+            onStatisticsClick={() => setShowStatistics(false)}
+          />
+          <div className="statistics-fullscreen">
+            <StatisticsDashboard />
+          </div>
+        </div>
+      ) : (
+        <div className="app-container">
+          <Header
+            nodeCount={graphData.nodes.length}
+            relationshipCount={graphData.relationships.length}
+            onStatisticsClick={() => setShowStatistics(true)}
+          />
+
         <div className="search-area">
           <SearchBar onSearch={handleSearch} isLoading={isLoading} />
-          
+
           {error && (
             <div className="error-message">
               {error}
             </div>
           )}
-          
+
           {showQueryPanel && (
             <div style={{ marginTop: '1rem' }}>
               <QueryPanel
@@ -387,55 +412,65 @@ function App() {
           )}
         </div>
 
-        <div className="main-content">
-          <TaxonomySidebar
-            labels={availableLabels}
-            selectedLabels={selectedLabels}
-            onLabelToggle={handleLabelToggle}
-            nodeCounts={nodeCounts}
-          />
-          
-          <main className="content-panel">
-            <TabNavigation
-              activeTab={activeTab}
-              onTabChange={(tab) => setActiveTab(tab as 'graph' | 'data' | 'results')}
-              resultCount={filteredGraphData.nodes.length}
+          <div className="main-content">
+            <TaxonomySidebar
+              labels={availableLabels}
+              selectedLabels={selectedLabels}
+              onLabelToggle={handleLabelToggle}
+              nodeCounts={nodeCounts}
             />
-            
-            <div className="tab-content">
-              {activeTab === 'graph' && (
-                <div className="graph-view">
-                  <div className="graph-canvas-wrapper">
-                    <GraphCanvas
-                      nodes={filteredGraphData.nodes}
-                      relationships={filteredGraphData.relationships}
-                      onNodeClick={handleNodeClick}
-                      onNodeDoubleClick={handleNodeDoubleClick}
-                      onRelationshipClick={handleRelationshipClick}
-                      styleConfig={styleConfiguration}
-                    />
+
+            <main className="content-panel">
+              <TabNavigation
+                activeTab={activeTab}
+                onTabChange={(tab) => setActiveTab(tab as 'graph' | 'data' | 'results')}
+                resultCount={filteredGraphData.nodes.length}
+              />
+
+              <NodeDetailsPanel
+                selectedNode={selectedNode}
+                selectedRelationship={selectedRelationship}
+                onClose={() => {
+                  setSelectedNode(null);
+                  setSelectedRelationship(null);
+                }}
+              />
+
+              <div className="tab-content">
+                {activeTab === 'graph' && (
+                  <div className="graph-view">
+                    <div className="graph-canvas-wrapper">
+                      <GraphCanvas
+                        nodes={filteredGraphData.nodes}
+                        relationships={filteredGraphData.relationships}
+                        onNodeClick={handleNodeClick}
+                        onNodeDoubleClick={handleNodeDoubleClick}
+                        onRelationshipClick={handleRelationshipClick}
+                        styleConfig={styleConfiguration}
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
-              
-              {activeTab === 'data' && (
-                <ResultsTable nodes={filteredGraphData.nodes} maxRows={50} />
-              )}
-              
-              {activeTab === 'results' && (
-                <ResultsTable nodes={filteredGraphData.nodes} maxRows={50} />
-              )}
-            </div>
-          </main>
+                )}
+
+                {activeTab === 'data' && (
+                  <ResultsTable nodes={filteredGraphData.nodes} maxRows={50} />
+                )}
+
+                {activeTab === 'results' && (
+                  <ResultsTable nodes={filteredGraphData.nodes} maxRows={50} />
+                )}
+              </div>
+            </main>
+          </div>
+
+          {aggregationResults && (
+            <AggregationResults
+              results={aggregationResults}
+              onClose={() => setAggregationResults(null)}
+            />
+          )}
         </div>
-        
-        {aggregationResults && (
-          <AggregationResults 
-            results={aggregationResults}
-            onClose={() => setAggregationResults(null)}
-          />
-        )}
-      </div>
+      )}
     </GraphProvider>
   );
 }

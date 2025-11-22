@@ -83,25 +83,13 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     onPan: true,
     onZoom: true,
     
-    // Handle node click - expand to show adjacent nodes
-    onNodeClick: (nvlNode) => {
-      console.log('NVL node clicked:', nvlNode.id);
-      const node = nodes.find(n => n.id === nvlNode.id);
-      if (!node) {
-        console.warn('Node not found:', nvlNode.id);
-        return;
-      }
-      
-      // Call the click handler to expand the node
-      onNodeClick(node);
-    },
-    
-    // Handle node double-click - also trigger expansion
+    // Handle node double-click - expand to show adjacent nodes
+    // Using double-click instead of single click to avoid conflict with dragging
     onNodeDoubleClick: (nvlNode) => {
-      console.log('NVL node double-clicked:', nvlNode.id);
+      console.log('NVL node double-clicked (expand):', nvlNode.id);
       const node = nodes.find(n => n.id === nvlNode.id);
       if (node) {
-        onNodeDoubleClick(node);
+        onNodeClick(node);
       }
     },
     
@@ -113,7 +101,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         onRelationshipClick(relationship);
       }
     },
-  }), [nodes, relationships, onNodeClick, onNodeDoubleClick, onRelationshipClick]);
+  }), [nodes, relationships, onNodeClick, onRelationshipClick]);
 
   // NVL options configuration
   const nvlOptions = useMemo(() => ({
@@ -125,11 +113,12 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     minZoom: 0.1,
   }), []);
 
-  // Interaction options - enable dragging
+  // Interaction options - enable node dragging
   const interactionOptions = useMemo(() => ({
-    selectOnClick: true,
+    selectOnClick: false, // Disable selection to allow dragging
     selectOnBoxZoom: false,
     enableDrag: true,
+    dragNodes: true, // Explicitly enable node dragging
   }), []);
 
   // Debug: Log when component renders

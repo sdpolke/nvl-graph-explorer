@@ -137,7 +137,7 @@ export interface ResultsTableProps {
 }
 
 export interface TabNavigationProps {
-  activeTab: 'graph' | 'data' | 'results';
+  activeTab: 'graph' | 'data' | 'results' | 'statistics';
   onTabChange: (tab: string) => void;
   resultCount: number;
 }
@@ -153,4 +153,25 @@ export interface NodeDetailPanelProps {
 
 export interface QueryResult {
   [key: string]: any;
+}
+
+// ============================================================================
+// Statistics Types
+// ============================================================================
+
+export interface NodeStatistic {
+  label: string;
+  count: number;
+  color: string;
+  percentage: number;
+}
+
+export interface RelationshipStatistic {
+  type: string;
+  direction: 'incoming' | 'outgoing';
+  count: number;
+  connectedNodeTypes: string[];
+  isSampled: boolean;
+  sampleSize?: number;
+  totalNodes?: number;
 }

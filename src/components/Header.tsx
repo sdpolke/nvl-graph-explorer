@@ -4,9 +4,14 @@ import './Header.css';
 interface HeaderProps {
   nodeCount?: number;
   relationshipCount?: number;
+  onStatisticsClick?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ nodeCount = 0, relationshipCount = 0 }) => {
+export const Header: React.FC<HeaderProps> = ({ 
+  nodeCount = 0, 
+  relationshipCount = 0,
+  onStatisticsClick 
+}) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => {
@@ -61,6 +66,21 @@ export const Header: React.FC<HeaderProps> = ({ nodeCount = 0, relationshipCount
         </div>
 
         <div className="header-right">
+          <button 
+            className="statistics-button"
+            onClick={onStatisticsClick}
+            aria-label="View Statistics Dashboard"
+            title="Statistics Dashboard"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <rect x="3" y="3" width="7" height="7" strokeWidth="2" />
+              <rect x="14" y="3" width="7" height="7" strokeWidth="2" />
+              <rect x="14" y="14" width="7" height="7" strokeWidth="2" />
+              <rect x="3" y="14" width="7" height="7" strokeWidth="2" />
+            </svg>
+            <span>Statistics</span>
+          </button>
+          
           <div className="user-menu">
             <button className="user-menu-button" aria-label="User menu">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">

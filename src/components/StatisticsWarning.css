@@ -1,0 +1,52 @@
+.statistics-warning {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+}
+
+.warning-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.warning-content {
+  flex: 1;
+}
+
+.warning-message {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #856404;
+  margin: 0 0 0.25rem 0;
+}
+
+.warning-details {
+  font-size: 0.85rem;
+  color: #856404;
+  opacity: 0.8;
+}
+
+.warning-dismiss {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #856404;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.warning-dismiss:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}

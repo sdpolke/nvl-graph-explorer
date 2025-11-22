@@ -5,9 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:all": "npm run dev:backend & npm run dev",
     "build": "tsc -b && vite build",
+    "build:backend": "cd backend && npm run build",
+    "build:all": "npm run build:backend && npm run build",
     "build:prod": "tsc -b && vite build --mode production",
     "build:analyze": "tsc -b && vite build --mode production && vite-bundle-visualizer",
+    "start:backend": "cd backend && npm start",
     "lint": "eslint .",
     "preview": "vite preview",
     "type-check": "tsc -b --noEmit",
@@ -20,7 +25,9 @@
     "lucide-react": "^0.554.0",
     "neo4j-driver": "^6.0.1",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "react-window": "^2.2.3",
+    "recharts": "^3.4.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -30,6 +37,7 @@
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
+    "@types/react-window": "^1.8.8",
     "@vitejs/plugin-react": "^5.1.1",
     "@vitest/ui": "^4.0.12",
     "eslint": "^9.39.1",

@@ -1,101 +1,45 @@
 /**
  * Neo4j Service
- * Handles all interactions with the Neo4j database including connection management,
- * query execution, and data transformation
+ * Handles all interactions with the Neo4j database through the backend proxy
  */
 
-import neo4j from 'neo4j-driver';
-import type { GraphData, Node, Relationship, AppError } from '../types';
+import type { GraphData, AppError } from '../types';
 import { ErrorType } from '../types';
 import { config } from '../config/env';
 
 export class Neo4jService {
-  private driver: any | null = null;
+  private proxyUrl: string;
   private isConnected: boolean = false;
-  private currentSession: any | null = null;
   private isQueryRunning: boolean = false;
+  private abortController: AbortController | null = null;
+  private statisticsCache: Map<string, { data: any; timestamp: number }> = new Map();
+  private readonly CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
+  constructor() {
+    this.proxyUrl = config.proxyUrl;
+  }
 
   /**
-   * Initialize the Neo4j driver and establish connection
+   * Initialize connection (no-op for proxy, connection handled by backend)
    */
   async connect(): Promise<void> {
     try {
-      // If already connected, don't create a new driver
-      if (this.driver && this.isConnected) {
-        return;
+      // Verify proxy is reachable
+      const response = await fetch(`${this.proxyUrl}/health`);
+      if (response.ok) {
+        this.isConnected = true;
+      } else {
+        throw new Error('Proxy health check failed');
       }
-
-      // Close existing driver if present but not connected
-      if (this.driver) {
-        await this.driver.close();
-        this.driver = null;
-      }
-
-      this.driver = neo4j.driver(
-        config.neo4j.uri,
-        neo4j.auth.basic(config.neo4j.username, config.neo4j.password),
-        {
-          maxConnectionPoolSize: config.neo4j.maxConnectionPoolSize,
-          connectionTimeout: config.neo4j.connectionTimeout,
-        }
-      );
-
-      // Verify connectivity
-      await this.verifyConnection();
-      this.isConnected = true;
     } catch (error) {
       this.isConnected = false;
       console.error('Connection error details:', error);
       throw this.createError(
         ErrorType.CONNECTION_ERROR,
-        'Failed to connect to Neo4j database',
+        'Failed to connect to backend proxy',
         error
       );
     }
-  }
-
-  /**
-   * Verify the database connection is working
-   */
-  async verifyConnection(): Promise<boolean> {
-    if (!this.driver) {
-      throw this.createError(
-        ErrorType.CONNECTION_ERROR,
-        'Driver not initialized'
-      );
-    }
-
-    const session = this.driver.session();
-    
-    try {
-      await session.run('RETURN 1');
-      return true;
-    } catch (error) {
-      throw this.createError(
-        ErrorType.CONNECTION_ERROR,
-        'Connection verification failed',
-        error
-      );
-    } finally {
-      await session.close();
-    }
-  }
-
-  /**
-   * Check if a query is an aggregation/count query
-   */
-  private isAggregationQuery(cypher: string): boolean {
-    // Check if query uses aggregation functions
-    const hasAggregation = /\b(COUNT|SUM|AVG|MIN|MAX|COLLECT)\s*\(/i.test(cypher);
-    // Check if RETURN clause doesn't include nodes or relationships
-    const returnMatch = cypher.match(/RETURN\s+(.+?)(?:LIMIT|ORDER|$)/i);
-    if (returnMatch) {
-      const returnClause = returnMatch[1];
-      // If return clause has aggregation and no node/relationship variables
-      const hasNodeOrRel = /\b[a-z]\b|\b[a-z]-\[|\]-\([a-z]\)/i.test(returnClause);
-      return hasAggregation && !hasNodeOrRel;
-    }
-    return false;
   }
 
   /**
@@ -105,62 +49,42 @@ export class Neo4jService {
     cypher: string,
     params: Record<string, any> = {}
   ): Promise<GraphData> {
-    if (!this.driver || !this.isConnected) {
+    if (!this.isConnected) {
       throw this.createError(
         ErrorType.CONNECTION_ERROR,
-        'Not connected to Neo4j database'
+        'Not connected to backend proxy'
       );
     }
 
-    this.currentSession = this.driver.session();
     this.isQueryRunning = true;
+    this.abortController = new AbortController();
     
     try {
-      const result = await this.currentSession.run(cypher, params);
-      
-      // Check if this is an aggregation query
-      if (this.isAggregationQuery(cypher)) {
-        // Return the aggregation result as metadata
-        const aggregationResults = result.records.map((record: any) => {
-          const obj: Record<string, any> = {};
-          record.keys.forEach((key: string) => {
-            const value = record.get(key);
-            obj[key] = neo4j.isInt(value) ? value.toNumber() : value;
-          });
-          return obj;
-        });
-        
-        console.log('Aggregation query result:', aggregationResults);
-        
-        // Return empty graph data with aggregation results in a special format
-        return {
-          nodes: [],
-          relationships: [],
-          aggregationResults
-        } as any; // We'll need to update the GraphData type
+      const response = await fetch(`${this.proxyUrl}/api/neo4j/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cypher, params }),
+        signal: this.abortController.signal
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw this.createProxyError(error);
       }
-      
-      return this.transformResultToGraphData(result);
+
+      return await response.json();
     } catch (error: any) {
-      // Check for timeout errors
-      if (error.code === 'ServiceUnavailable' || error.message?.includes('timeout')) {
+      if (error.name === 'AbortError') {
         throw this.createError(
-          ErrorType.TIMEOUT_ERROR,
-          'Query execution timed out',
+          ErrorType.QUERY_ERROR,
+          'Query was cancelled',
           error
         );
       }
-      throw this.createError(
-        ErrorType.QUERY_ERROR,
-        'Failed to execute query',
-        error
-      );
+      throw error;
     } finally {
       this.isQueryRunning = false;
-      if (this.currentSession) {
-        await this.currentSession.close();
-        this.currentSession = null;
-      }
+      this.abortController = null;
     }
   }
 
@@ -168,10 +92,9 @@ export class Neo4jService {
    * Stop the currently running query
    */
   async stopQuery(): Promise<void> {
-    if (this.currentSession && this.isQueryRunning) {
+    if (this.abortController && this.isQueryRunning) {
       try {
-        await this.currentSession.close();
-        this.currentSession = null;
+        this.abortController.abort();
         this.isQueryRunning = false;
       } catch (error) {
         console.error('Error stopping query:', error);
@@ -195,16 +118,27 @@ export class Neo4jService {
    * Expand a node by fetching its connected nodes and relationships
    */
   async expandNode(nodeId: string): Promise<GraphData> {
-    const cypher = `
-      MATCH (n)-[r]-(connected)
-      WHERE elementId(n) = $nodeId
-      RETURN n, r, connected
-      LIMIT 50
-    `;
-    
+    if (!this.isConnected) {
+      throw this.createError(
+        ErrorType.CONNECTION_ERROR,
+        'Not connected to backend proxy'
+      );
+    }
+
     try {
       console.log('Expanding node with ID:', nodeId);
-      const result = await this.executeQuery(cypher, { nodeId });
+      const response = await fetch(`${this.proxyUrl}/api/neo4j/expand`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nodeId })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw this.createProxyError(error);
+      }
+
+      const result = await response.json();
       console.log('Expand query returned:', {
         nodes: result.nodes.length,
         relationships: result.relationships.length
@@ -233,7 +167,7 @@ export class Neo4jService {
     `;
     
     try {
-      return await this.executeQuery(cypher, { limit: neo4j.int(limit) });
+      return await this.executeQuery(cypher, { limit });
     } catch (error) {
       throw this.createError(
         ErrorType.QUERY_ERROR,
@@ -247,199 +181,32 @@ export class Neo4jService {
    * Fetch the database schema including node labels, properties, and relationship types
    */
   async getSchema(): Promise<{ nodeLabels: string[]; relationshipTypes: string[]; schema: string }> {
-    if (!this.driver || !this.isConnected) {
+    if (!this.isConnected) {
       throw this.createError(
         ErrorType.CONNECTION_ERROR,
-        'Not connected to Neo4j database'
+        'Not connected to backend proxy'
       );
     }
 
-    const session = this.driver.session();
     try {
-      // Get all node labels
-      const labelsResult = await session.run('CALL db.labels()');
-      const nodeLabels = labelsResult.records.map((record: any) => record.get(0));
+      const response = await fetch(`${this.proxyUrl}/api/neo4j/schema`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
 
-      // Get all relationship types
-      const relsResult = await session.run('CALL db.relationshipTypes()');
-      const relationshipTypes = relsResult.records.map((record: any) => record.get(0));
-
-      // Get node properties for each label
-      const nodeProperties: Record<string, string[]> = {};
-      for (const label of nodeLabels) {
-        try {
-          const propsResult = await session.run(`
-            MATCH (n:\`${label}\`)
-            WITH n LIMIT 100
-            UNWIND keys(n) AS key
-            RETURN DISTINCT key
-            ORDER BY key
-          `);
-          nodeProperties[label] = propsResult.records.map((record: any) => record.get('key'));
-        } catch (err) {
-          console.warn(`Failed to fetch properties for label ${label}:`, err);
-          nodeProperties[label] = [];
-        }
+      if (!response.ok) {
+        const error = await response.json();
+        throw this.createProxyError(error);
       }
 
-      // Get schema visualization
-      const schemaResult = await session.run(`
-        CALL db.schema.visualization()
-      `);
-
-      // Format schema information
-      const schema = this.formatSchema(nodeLabels, relationshipTypes, nodeProperties, schemaResult);
-
-      return {
-        nodeLabels,
-        relationshipTypes,
-        schema
-      };
+      return await response.json();
     } catch (error: any) {
       throw this.createError(
         ErrorType.QUERY_ERROR,
         'Failed to fetch database schema',
         error
       );
-    } finally {
-      await session.close();
     }
-  }
-
-  /**
-   * Format schema information for OpenAI context
-   */
-  private formatSchema(
-    nodeLabels: string[], 
-    relationshipTypes: string[], 
-    nodeProperties: Record<string, string[]>,
-    schemaResult: any
-  ): string {
-    let schema = '## Actual Database Schema\n\n';
-    
-    schema += '### Node Labels with Properties:\n';
-    nodeLabels.forEach(label => {
-      schema += `- **${label}**`;
-      const props = nodeProperties[label];
-      if (props && props.length > 0) {
-        schema += ` (properties: ${props.join(', ')})`;
-      }
-      schema += '\n';
-    });
-    
-    schema += '\n### Relationship Types:\n';
-    relationshipTypes.forEach(type => {
-      schema += `- ${type}\n`;
-    });
-
-    // Try to extract relationship patterns from schema visualization
-    if (schemaResult.records.length > 0) {
-      schema += '\n### Relationship Patterns:\n';
-      const record = schemaResult.records[0];
-      const nodes = record.get('nodes') || [];
-      const relationships = record.get('relationships') || [];
-      
-      relationships.forEach((rel: any) => {
-        try {
-          const startNode = nodes.find((n: any) => n.identity.equals(rel.start));
-          const endNode = nodes.find((n: any) => n.identity.equals(rel.end));
-          
-          if (startNode && endNode) {
-            const startLabel = startNode.labels?.[0] || 'Node';
-            const endLabel = endNode.labels?.[0] || 'Node';
-            schema += `- (${startLabel})-[${rel.type}]->(${endLabel})\n`;
-          }
-        } catch (e) {
-          // Skip if we can't parse the relationship
-        }
-      });
-    }
-
-    schema += '\n### Query Guidelines:\n';
-    schema += '- Use the actual node labels and properties listed above\n';
-    schema += '- Use toLower() for case-insensitive text matching\n';
-    schema += '- Always include LIMIT clause (default 50, max 100)\n';
-    schema += '- Return both nodes and relationships for graph visualization\n';
-
-    return schema;
-  }
-
-  /**
-   * Transform Neo4j query result to application GraphData model
-   */
-  private transformResultToGraphData(result: any): GraphData {
-    const nodes: Node[] = [];
-    const relationships: Relationship[] = [];
-    const nodeIds = new Set<string>();
-    const relationshipIds = new Set<string>();
-
-    result.records.forEach((record: any) => {
-      record.forEach((value: any) => {
-        if (this.isNeo4jNode(value)) {
-          // Use elementId for Neo4j 5+ compatibility, fallback to identity for older versions
-          const nodeId = value.elementId || value.identity.toString();
-          if (!nodeIds.has(nodeId)) {
-            nodes.push({
-              id: nodeId,
-              labels: value.labels,
-              properties: this.convertProperties(value.properties),
-            });
-            nodeIds.add(nodeId);
-          }
-        } else if (this.isNeo4jRelationship(value)) {
-          // Use elementId for Neo4j 5+ compatibility, fallback to identity for older versions
-          const relId = value.elementId || value.identity.toString();
-          const startNodeId = value.startNodeElementId || value.start.toString();
-          const endNodeId = value.endNodeElementId || value.end.toString();
-          
-          if (!relationshipIds.has(relId)) {
-            relationships.push({
-              id: relId,
-              type: value.type,
-              startNodeId: startNodeId,
-              endNodeId: endNodeId,
-              properties: this.convertProperties(value.properties),
-            });
-            relationshipIds.add(relId);
-          }
-        }
-      });
-    });
-
-    return { nodes, relationships };
-  }
-
-  /**
-   * Type guard to check if value is a Neo4j node
-   */
-  private isNeo4jNode(value: any): boolean {
-    return value && typeof value === 'object' && 'labels' in value && 'identity' in value;
-  }
-
-  /**
-   * Type guard to check if value is a Neo4j relationship
-   */
-  private isNeo4jRelationship(value: any): boolean {
-    return value && typeof value === 'object' && 'type' in value && 'start' in value && 'end' in value;
-  }
-
-  /**
-   * Convert Neo4j property values to plain JavaScript objects
-   */
-  private convertProperties(properties: Record<string, any>): Record<string, any> {
-    const converted: Record<string, any> = {};
-    
-    for (const [key, value] of Object.entries(properties)) {
-      if (neo4j.isInt(value)) {
-        converted[key] = value.toNumber();
-      } else if (neo4j.isDate(value) || neo4j.isDateTime(value) || neo4j.isTime(value)) {
-        converted[key] = value.toString();
-      } else {
-        converted[key] = value;
-      }
-    }
-    
-    return converted;
   }
 
   /**
@@ -454,6 +221,36 @@ export class Neo4jService {
   }
 
   /**
+   * Create error from proxy error response
+   */
+  private createProxyError(error: any): AppError {
+    const errorType = this.mapProxyErrorType(error.error?.type);
+    return this.createError(
+      errorType,
+      error.error?.message || 'Unknown proxy error',
+      error.error?.details
+    );
+  }
+
+  /**
+   * Map proxy error types to frontend error types
+   */
+  private mapProxyErrorType(proxyErrorType?: string): ErrorType {
+    switch (proxyErrorType) {
+      case 'NEO4J_CONNECTION_ERROR':
+        return ErrorType.CONNECTION_ERROR;
+      case 'NEO4J_QUERY_ERROR':
+        return ErrorType.QUERY_ERROR;
+      case 'TIMEOUT_ERROR':
+        return ErrorType.TIMEOUT_ERROR;
+      case 'VALIDATION_ERROR':
+        return ErrorType.QUERY_ERROR;
+      default:
+        return ErrorType.QUERY_ERROR;
+    }
+  }
+
+  /**
    * Check if the service is connected
    */
   isServiceConnected(): boolean {
@@ -461,19 +258,152 @@ export class Neo4jService {
   }
 
   /**
-   * Close the driver connection
+   * Get node statistics with counts for each label
+   */
+  async getNodeStatistics(options?: { limit?: number; offset?: number }): Promise<any[]> {
+    const cacheKey = `nodeStats_${options?.limit || 50}_${options?.offset || 0}`;
+    const cached = this.statisticsCache.get(cacheKey);
+    
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+      return cached.data;
+    }
+
+    if (!this.isConnected) {
+      throw this.createError(
+        ErrorType.CONNECTION_ERROR,
+        'Not connected to backend proxy'
+      );
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    try {
+      const response = await fetch(`${this.proxyUrl}/api/neo4j/statistics/nodes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(options || {}),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw this.createProxyError(error);
+      }
+
+      const result = await response.json();
+      const statistics = result.statistics;
+
+      this.statisticsCache.set(cacheKey, {
+        data: statistics,
+        timestamp: Date.now()
+      });
+
+      return statistics;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        throw this.createError(
+          ErrorType.TIMEOUT_ERROR,
+          'Query timed out after 30 seconds',
+          error
+        );
+      }
+      
+      throw this.createError(
+        ErrorType.QUERY_ERROR,
+        'Failed to fetch node statistics',
+        error
+      );
+    }
+  }
+
+  /**
+   * Get relationship statistics for a specific node label
+   */
+  async getRelationshipStatistics(
+    nodeLabel: string, 
+    options?: { sampleSize?: number }
+  ): Promise<any[]> {
+    const cacheKey = `relStats_${nodeLabel}`;
+    const cached = this.statisticsCache.get(cacheKey);
+    
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+      return cached.data;
+    }
+
+    if (!this.isConnected) {
+      throw this.createError(
+        ErrorType.CONNECTION_ERROR,
+        'Not connected to backend proxy'
+      );
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    try {
+      const response = await fetch(`${this.proxyUrl}/api/neo4j/statistics/relationships`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nodeLabel, ...options }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw this.createProxyError(error);
+      }
+
+      const result = await response.json();
+      const statistics = result.statistics;
+
+      this.statisticsCache.set(cacheKey, {
+        data: statistics,
+        timestamp: Date.now()
+      });
+
+      return statistics;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        throw this.createError(
+          ErrorType.TIMEOUT_ERROR,
+          `Query timed out after 30 seconds for ${nodeLabel}`,
+          error
+        );
+      }
+      
+      throw this.createError(
+        ErrorType.QUERY_ERROR,
+        `Failed to fetch relationship statistics for ${nodeLabel}`,
+        error
+      );
+    }
+  }
+
+  /**
+   * Check if APOC procedures are available (cached result from backend)
+   */
+  async checkApocAvailability(): Promise<boolean> {
+    // APOC availability is now handled by the backend
+    // This method is kept for compatibility but always returns true
+    // since the backend will use APOC if available
+    return true;
+  }
+
+  /**
+   * Close the connection (no-op for proxy)
    */
   async disconnect(): Promise<void> {
-    if (this.driver) {
-      try {
-        await this.driver.close();
-      } catch (error) {
-        console.error('Error during disconnect:', error);
-      } finally {
-        this.driver = null;
-        this.isConnected = false;
-      }
-    }
+    this.isConnected = false;
+    this.statisticsCache.clear();
   }
 }
 

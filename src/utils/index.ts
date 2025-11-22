@@ -7,3 +7,4 @@ export {
 } from './styleConfig';
 
 export { ErrorHandler } from './ErrorHandler';
+export { debounce } from './debounce';
