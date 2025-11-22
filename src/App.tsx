@@ -22,7 +22,7 @@ function App() {
   const [generatedQuery, setGeneratedQuery] = useState<string>('');
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [showQueryPanel, setShowQueryPanel] = useState(false);
-  const [activeTab, setActiveTab] = useState<'graph' | 'data' | 'results'>('graph');
+  const [activeTab, setActiveTab] = useState<'graph' | 'data'>('graph');
   const [dbSchema, setDbSchema] = useState<string>('');
   const [aggregationResults, setAggregationResults] = useState<Record<string, any>[] | null>(null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
@@ -438,7 +438,7 @@ function App() {
             <main className="content-panel">
               <TabNavigation
                 activeTab={activeTab}
-                onTabChange={(tab) => setActiveTab(tab as 'graph' | 'data' | 'results')}
+                onTabChange={(tab) => setActiveTab(tab as 'graph' | 'data')}
                 resultCount={filteredGraphData.nodes.length}
               />
 
@@ -468,10 +468,6 @@ function App() {
                 )}
 
                 {activeTab === 'data' && (
-                  <ResultsTable nodes={filteredGraphData.nodes} maxRows={50} />
-                )}
-
-                {activeTab === 'results' && (
                   <ResultsTable nodes={filteredGraphData.nodes} maxRows={50} />
                 )}
               </div>

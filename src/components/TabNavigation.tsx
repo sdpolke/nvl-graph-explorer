@@ -14,7 +14,6 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
   const tabs: Array<{ id: string; label: string; showBadge?: boolean }> = [
     { id: 'graph', label: 'Explorer' },
     { id: 'data', label: 'Data', showBadge: true },
-    { id: 'results', label: 'Results' },
   ];
 
   return (
