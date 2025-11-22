@@ -1,0 +1,1 @@
+export { useQuerySuggestions } from './useQuerySuggestions';

@@ -60,47 +60,44 @@
 
 /* Individual control buttons are clickable */
 .control-button {
-  width: 50px;
-  height: 50px;
-  background: rgba(255, 255, 255, 0.95);
-  border: 2px solid rgba(0, 0, 0, 0.1);
-  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  background: rgba(42, 42, 42, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #000000;
+  color: #e5e7eb;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  pointer-events: auto; /* Buttons themselves are clickable */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  pointer-events: auto;
   backdrop-filter: blur(10px);
 }
 
 .control-button:hover {
-  background: rgba(255, 255, 255, 1);
-  border-color: rgba(102, 126, 234, 0.5);
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  background: rgba(74, 137, 220, 0.9);
+  border-color: rgba(74, 137, 220, 0.8);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(74, 137, 220, 0.5);
 }
 
 .control-button:active {
-  transform: translateY(0) scale(0.98);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  background: rgba(240, 240, 240, 1);
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  background: rgba(60, 120, 200, 0.95);
 }
 
 .control-button:focus-visible {
-  outline: 2px solid #667eea;
-  outline-offset: 3px;
+  outline: 2px solid #4a89dc;
+  outline-offset: 2px;
 }
 
 .control-button svg {
   pointer-events: none;
-  width: 38px;
-  height: 38px;
-  stroke-width: 2.5;
-  stroke: #000000;
-  color: #000000;
+  flex-shrink: 0;
 }
 
 /* Fullscreen mode adjustments */
@@ -120,20 +117,14 @@
 
 @media (max-width: 768px) {
   .graph-controls {
-    top: var(--spacing-sm);
-    right: var(--spacing-sm);
-    gap: var(--spacing-xs);
+    bottom: 16px;
+    right: 16px;
+    gap: 8px;
   }
   
-  .control-button,
-  .zoom-indicator {
-    width: 36px;
-    height: 36px;
-  }
-  
-  .control-button svg {
-    width: 18px;
-    height: 18px;
+  .control-button {
+    width: 40px;
+    height: 40px;
   }
   
   .zoom-indicator {
@@ -153,18 +144,14 @@
 
 @media (max-width: 480px) {
   .graph-controls {
-    gap: 4px;
+    gap: 6px;
+    bottom: 12px;
+    right: 12px;
   }
   
-  .control-button,
-  .zoom-indicator {
-    width: 32px;
-    height: 32px;
-  }
-  
-  .control-button svg {
-    width: 16px;
-    height: 16px;
+  .control-button {
+    width: 36px;
+    height: 36px;
   }
   
   .zoom-indicator {

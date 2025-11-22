@@ -15,4 +15,6 @@ export { NodeTypeTable } from './NodeTypeTable';
 export { StatisticsError } from './StatisticsError';
 export { StatisticsEmpty } from './StatisticsEmpty';
 export { StatisticsWarning } from './StatisticsWarning';
+export { QuerySuggestionItem } from './QuerySuggestionItem';
+export { QuerySuggestionsPanel } from './QuerySuggestionsPanel';
 

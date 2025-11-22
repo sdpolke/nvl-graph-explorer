@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Search, Loader2 } from 'lucide-react';
 import type { SearchBarProps } from '../types';
 import './SearchBar.css';
 
@@ -19,14 +20,17 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => 
   return (
     <div className="search-bar">
       <form onSubmit={handleSubmit} className="search-form">
-        <input
-          type="text"
-          className="search-input"
-          placeholder="Ask a question in natural language (e.g., 'Show me genes related to cancer')"
-          value={searchText}
-          onChange={handleInputChange}
-          disabled={isLoading}
-        />
+        <div className="search-input-wrapper">
+          <Search className="search-icon" size={20} />
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Ask a question in natural language (e.g., 'Show me genes related to cancer')"
+            value={searchText}
+            onChange={handleInputChange}
+            disabled={isLoading}
+          />
+        </div>
         <button
           type="submit"
           className="search-button"
@@ -34,11 +38,14 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => 
         >
           {isLoading ? (
             <span className="loading-indicator">
-              <span className="spinner"></span>
-              Searching...
+              <Loader2 className="spinner-icon" size={16} />
+               
             </span>
           ) : (
-            'Search'
+            <>
+              <Search size={16} />
+              Search
+            </>
           )}
         </button>
       </form>

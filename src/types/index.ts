@@ -120,6 +120,9 @@ export interface TaxonomySidebarProps {
   selectedLabels: string[];
   onLabelToggle: (label: string) => void;
   nodeCounts: Record<string, number>;
+  onQuerySelect: (query: string) => void;
+  isQueryExecuting: boolean;
+  activeQuery?: string | null;
 }
 
 export interface QueryPanelProps {
@@ -174,4 +177,45 @@ export interface RelationshipStatistic {
   isSampled: boolean;
   sampleSize?: number;
   totalNodes?: number;
+}
+
+// ============================================================================
+// Query Suggestions Types
+// ============================================================================
+
+export interface QuerySuggestion {
+  id: string;
+  query: string;
+  description?: string;
+  complexity: 'basic' | 'intermediate' | 'advanced';
+  tags?: string[];
+}
+
+export interface QuerySuggestionCategory {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  order: number;
+  suggestions: QuerySuggestion[];
+}
+
+export interface QuerySuggestionItemProps {
+  suggestion: QuerySuggestion;
+  isActive: boolean;
+  isExecuting: boolean;
+  onClick: () => void;
+}
+
+export interface QuerySuggestionsPanelProps {
+  onQuerySelect: (query: string) => void;
+  isExecuting: boolean;
+  activeQuery: string | null;
+}
+
+export interface UseQuerySuggestionsReturn {
+  suggestions: QuerySuggestionCategory[];
+  isLoading: boolean;
+  error: string | null;
+  reload: () => Promise<void>;
 }

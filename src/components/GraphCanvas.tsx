@@ -236,7 +236,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               title="Fit to View"
               aria-label="Fit to View"
             >
-              <Maximize2 size={38} color="#000000" strokeWidth={2.5} />
+              <Maximize2 size={22} strokeWidth={2} />
             </button>
             
             <button
@@ -245,7 +245,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               title="Reset Zoom"
               aria-label="Reset Zoom"
             >
-              <RotateCcw size={38} color="#000000" strokeWidth={2.5} />
+              <RotateCcw size={22} strokeWidth={2} />
             </button>
             
             <button
@@ -255,9 +255,9 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               aria-label={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
             >
               {isFullscreen ? (
-                <Minimize2 size={38} color="#000000" strokeWidth={2.5} />
+                <Minimize2 size={22} strokeWidth={2} />
               ) : (
-                <Maximize size={38} color="#000000" strokeWidth={2.5} />
+                <Maximize size={22} strokeWidth={2} />
               )}
             </button>
           </div>

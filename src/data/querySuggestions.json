@@ -1,0 +1,476 @@
+{
+  "version": "1.0",
+  "description": "Curated natural language query suggestions for biomedical knowledge graph exploration",
+  "categories": [
+    {
+      "id": "basic-exploration",
+      "name": "Basic Exploration",
+      "description": "Simple queries to get started exploring the graph",
+      "icon": "🔍",
+      "order": 1,
+      "suggestions": [
+        {
+          "id": "show-proteins",
+          "query": "Show me 20 proteins",
+          "description": "Display a sample of protein nodes",
+          "complexity": "basic",
+          "tags": ["protein", "basic"]
+        },
+        {
+          "id": "find-genes",
+          "query": "Find all genes",
+          "description": "List all gene nodes in the database",
+          "complexity": "basic",
+          "tags": ["gene", "basic"]
+        },
+        {
+          "id": "show-diseases",
+          "query": "Display all diseases",
+          "description": "Show disease nodes",
+          "complexity": "basic",
+          "tags": ["disease", "basic"]
+        },
+        {
+          "id": "show-pathways",
+          "query": "Show me pathways",
+          "description": "Display pathway nodes",
+          "complexity": "basic",
+          "tags": ["pathway", "basic"]
+        }
+      ]
+    },
+    {
+      "id": "protein-interactions",
+      "name": "Protein Interactions",
+      "description": "Explore protein-protein interaction networks",
+      "icon": "🔗",
+      "order": 2,
+      "suggestions": [
+        {
+          "id": "protein-interactions",
+          "query": "Which proteins interact with each other?",
+          "description": "Find curated protein-protein interactions",
+          "complexity": "intermediate",
+          "tags": ["protein", "interaction", "network"]
+        },
+        {
+          "id": "protein-complexes",
+          "query": "Find proteins that are part of protein complexes",
+          "description": "Show proteins that form complexes",
+          "complexity": "intermediate",
+          "tags": ["protein", "complex"]
+        },
+        {
+          "id": "protein-acts-on",
+          "query": "Show me proteins that act on other proteins",
+          "description": "Find enzymatic relationships between proteins",
+          "complexity": "intermediate",
+          "tags": ["protein", "enzyme"]
+        },
+        {
+          "id": "highly-connected-proteins",
+          "query": "Find proteins with more than 10 interaction partners",
+          "description": "Identify hub proteins in the network",
+          "complexity": "advanced",
+          "tags": ["protein", "hub", "analytics"]
+        },
+        {
+          "id": "shared-partners",
+          "query": "Show me proteins that share common interaction partners",
+          "description": "Find proteins with overlapping interaction networks",
+          "complexity": "advanced",
+          "tags": ["protein", "pattern", "network"]
+        }
+      ]
+    },
+    {
+      "id": "disease-biomarkers",
+      "name": "Disease & Biomarkers",
+      "description": "Explore disease-protein relationships and biomarkers",
+      "icon": "🏥",
+      "order": 3,
+      "suggestions": [
+        {
+          "id": "disease-biomarkers",
+          "query": "What proteins are biomarkers of diseases?",
+          "description": "Find protein biomarkers for diseases",
+          "complexity": "intermediate",
+          "tags": ["disease", "biomarker", "protein"]
+        },
+        {
+          "id": "disease-proteins",
+          "query": "Show me diseases and their associated proteins",
+          "description": "Explore disease-protein associations",
+          "complexity": "intermediate",
+          "tags": ["disease", "protein"]
+        },
+        {
+          "id": "pathology-proteins",
+          "query": "Find all proteins detected in disease pathology samples",
+          "description": "Show proteins found in disease samples",
+          "complexity": "intermediate",
+          "tags": ["disease", "protein", "pathology"]
+        },
+        {
+          "id": "disease-publications",
+          "query": "Which diseases are mentioned in publications?",
+          "description": "Find diseases with research publications",
+          "complexity": "basic",
+          "tags": ["disease", "publication"]
+        }
+      ]
+    },
+    {
+      "id": "gene-protein-disease",
+      "name": "Gene-Protein-Disease Pathways",
+      "description": "Complex multi-hop queries across genes, proteins, and diseases",
+      "icon": "🧬",
+      "order": 4,
+      "suggestions": [
+        {
+          "id": "gene-protein-disease-path",
+          "query": "Find genes that are transcribed into proteins associated with diseases",
+          "description": "Multi-hop traversal from genes to diseases",
+          "complexity": "advanced",
+          "tags": ["gene", "protein", "disease", "pathway"]
+        },
+        {
+          "id": "gene-to-disease",
+          "query": "Show me the path from genes to proteins to diseases",
+          "description": "Explore complete gene-to-disease pathways",
+          "complexity": "advanced",
+          "tags": ["gene", "protein", "disease", "path"]
+        },
+        {
+          "id": "gwas-variants",
+          "query": "Which genes have variants found in GWAS studies?",
+          "description": "Find genes with GWAS-identified variants",
+          "complexity": "intermediate",
+          "tags": ["gene", "variant", "gwas"]
+        },
+        {
+          "id": "chromosome-gene-protein",
+          "query": "Find proteins translated from genes located on specific chromosomes",
+          "description": "Explore chromosome-gene-protein relationships",
+          "complexity": "advanced",
+          "tags": ["chromosome", "gene", "protein"]
+        },
+        {
+          "id": "gene-transcript-protein",
+          "query": "Show me genes, their transcripts, and resulting proteins",
+          "description": "Complete gene expression pathway",
+          "complexity": "intermediate",
+          "tags": ["gene", "transcript", "protein"]
+        }
+      ]
+    },
+    {
+      "id": "variant-analysis",
+      "name": "Variant Analysis",
+      "description": "Explore genetic variants and their clinical relevance",
+      "icon": "🧪",
+      "order": 5,
+      "suggestions": [
+        {
+          "id": "variant-clinical-relevance",
+          "query": "Find all known variants and their clinical relevance",
+          "description": "Show variants with clinical significance",
+          "complexity": "intermediate",
+          "tags": ["variant", "clinical"]
+        },
+        {
+          "id": "variants-affect-interactions",
+          "query": "Which variants affect protein interactions?",
+          "description": "Find variants that disrupt protein interactions",
+          "complexity": "advanced",
+          "tags": ["variant", "protein", "interaction"]
+        },
+        {
+          "id": "variant-locations",
+          "query": "Show me variants found in genes, proteins, and chromosomes",
+          "description": "Explore variant genomic locations",
+          "complexity": "intermediate",
+          "tags": ["variant", "gene", "protein", "chromosome"]
+        },
+        {
+          "id": "clinical-variants-diseases",
+          "query": "Find clinically relevant variants associated with diseases",
+          "description": "Disease-associated clinical variants",
+          "complexity": "advanced",
+          "tags": ["variant", "disease", "clinical"]
+        },
+        {
+          "id": "gwas-variants",
+          "query": "Which variants are mentioned in GWAS studies?",
+          "description": "GWAS-identified genetic variants",
+          "complexity": "intermediate",
+          "tags": ["variant", "gwas"]
+        }
+      ]
+    },
+    {
+      "id": "pathway-metabolite",
+      "name": "Pathways & Metabolites",
+      "description": "Explore biological pathways and metabolite networks",
+      "icon": "⚗️",
+      "order": 6,
+      "suggestions": [
+        {
+          "id": "pathway-proteins",
+          "query": "Find proteins annotated in pathways",
+          "description": "Show pathway-protein associations",
+          "complexity": "intermediate",
+          "tags": ["pathway", "protein"]
+        },
+        {
+          "id": "metabolite-diseases",
+          "query": "Show me metabolites associated with diseases",
+          "description": "Explore metabolite-disease relationships",
+          "complexity": "intermediate",
+          "tags": ["metabolite", "disease"]
+        },
+        {
+          "id": "metabolite-cellular-component",
+          "query": "Which metabolites are found in specific cellular components?",
+          "description": "Metabolite cellular localization",
+          "complexity": "intermediate",
+          "tags": ["metabolite", "cellular"]
+        },
+        {
+          "id": "pathway-disease-proteins",
+          "query": "Find pathways containing proteins associated with diseases",
+          "description": "Disease-relevant pathway analysis",
+          "complexity": "advanced",
+          "tags": ["pathway", "protein", "disease"]
+        },
+        {
+          "id": "metabolite-biological-process",
+          "query": "Show me metabolites associated with biological processes",
+          "description": "Metabolite functional associations",
+          "complexity": "intermediate",
+          "tags": ["metabolite", "biological_process"]
+        }
+      ]
+    },
+    {
+      "id": "multi-hop-traversals",
+      "name": "Multi-hop Traversals",
+      "description": "Complex graph traversals across multiple relationship types",
+      "icon": "🌐",
+      "order": 7,
+      "suggestions": [
+        {
+          "id": "disease-protein-biomarker-path",
+          "query": "Find diseases connected to proteins through biomarker relationships",
+          "description": "Explore disease-biomarker networks",
+          "complexity": "advanced",
+          "tags": ["disease", "protein", "biomarker", "path"]
+        },
+        {
+          "id": "gene-protein-complex-tissue",
+          "query": "Show me the path from genes to proteins to complexes to tissues",
+          "description": "4-hop traversal across multiple node types",
+          "complexity": "advanced",
+          "tags": ["gene", "protein", "complex", "tissue", "path"]
+        },
+        {
+          "id": "protein-3-hops",
+          "query": "Which proteins are connected through exactly 3 interaction hops?",
+          "description": "Find proteins at specific network distances",
+          "complexity": "advanced",
+          "tags": ["protein", "interaction", "distance"]
+        },
+        {
+          "id": "disease-shared-proteins",
+          "query": "Find indirect connections between diseases through shared proteins",
+          "description": "Disease similarity through protein overlap",
+          "complexity": "advanced",
+          "tags": ["disease", "protein", "pattern"]
+        },
+        {
+          "id": "protein-substrate-cascade",
+          "query": "Show me genes that produce proteins that are substrates of other proteins",
+          "description": "Explore enzymatic cascades",
+          "complexity": "advanced",
+          "tags": ["gene", "protein", "substrate", "cascade"]
+        },
+        {
+          "id": "modification-cascade",
+          "query": "Discover protein modification cascades",
+          "description": "Find chains of protein modifications",
+          "complexity": "advanced",
+          "tags": ["protein", "modification", "cascade"]
+        }
+      ]
+    },
+    {
+      "id": "protein-modifications",
+      "name": "Protein Modifications",
+      "description": "Explore post-translational modifications and modified proteins",
+      "icon": "🔬",
+      "order": 8,
+      "suggestions": [
+        {
+          "id": "modified-proteins",
+          "query": "Show me modified proteins and their modifications",
+          "description": "Explore protein modifications",
+          "complexity": "intermediate",
+          "tags": ["protein", "modification"]
+        },
+        {
+          "id": "modification-sites",
+          "query": "Find proteins with specific modification sites",
+          "description": "Show proteins with PTM sites",
+          "complexity": "intermediate",
+          "tags": ["protein", "modification", "site"]
+        },
+        {
+          "id": "protein-substrates",
+          "query": "Which proteins are substrates of other proteins?",
+          "description": "Find enzyme-substrate relationships",
+          "complexity": "intermediate",
+          "tags": ["protein", "substrate", "enzyme"]
+        },
+        {
+          "id": "peptide-modifications",
+          "query": "Show me peptides with modified sites",
+          "description": "Explore peptide modifications",
+          "complexity": "intermediate",
+          "tags": ["peptide", "modification"]
+        }
+      ]
+    },
+    {
+      "id": "structural-functional",
+      "name": "Structure & Function",
+      "description": "Explore protein structures and functional annotations",
+      "icon": "🏗️",
+      "order": 9,
+      "suggestions": [
+        {
+          "id": "protein-structures",
+          "query": "Find proteins with known 3D structures",
+          "description": "Show structurally characterized proteins",
+          "complexity": "basic",
+          "tags": ["protein", "structure"]
+        },
+        {
+          "id": "functional-regions",
+          "query": "Show me functional regions found in proteins",
+          "description": "Explore protein domains and regions",
+          "complexity": "intermediate",
+          "tags": ["protein", "functional_region"]
+        },
+        {
+          "id": "molecular-function",
+          "query": "Which proteins are associated with specific molecular functions?",
+          "description": "Functional annotation of proteins",
+          "complexity": "intermediate",
+          "tags": ["protein", "molecular_function"]
+        },
+        {
+          "id": "cellular-localization",
+          "query": "Find proteins located in specific cellular components",
+          "description": "Protein subcellular localization",
+          "complexity": "intermediate",
+          "tags": ["protein", "cellular_component"]
+        },
+        {
+          "id": "biological-processes",
+          "query": "Show me proteins involved in specific biological processes",
+          "description": "Process-level protein annotations",
+          "complexity": "intermediate",
+          "tags": ["protein", "biological_process"]
+        }
+      ]
+    },
+    {
+      "id": "network-analytics",
+      "name": "Network Analytics",
+      "description": "Analytical queries to understand network topology and statistics",
+      "icon": "📊",
+      "order": 10,
+      "suggestions": [
+        {
+          "id": "most-connected-proteins",
+          "query": "Which proteins have the most connections in the network?",
+          "description": "Find hub proteins by degree centrality",
+          "complexity": "advanced",
+          "tags": ["protein", "analytics", "hub"]
+        },
+        {
+          "id": "hub-proteins",
+          "query": "Find hub proteins with more than 20 relationships",
+          "description": "Identify highly connected proteins",
+          "complexity": "advanced",
+          "tags": ["protein", "hub", "analytics"]
+        },
+        {
+          "id": "connected-diseases",
+          "query": "Show me the most connected diseases",
+          "description": "Find diseases with most associations",
+          "complexity": "intermediate",
+          "tags": ["disease", "analytics"]
+        },
+        {
+          "id": "gene-variants-count",
+          "query": "Which genes have the most variants?",
+          "description": "Count variants per gene",
+          "complexity": "intermediate",
+          "tags": ["gene", "variant", "analytics"]
+        },
+        {
+          "id": "bridge-proteins",
+          "query": "Find proteins that bridge different disease areas",
+          "description": "Identify proteins connecting disease clusters",
+          "complexity": "advanced",
+          "tags": ["protein", "disease", "bridge", "analytics"]
+        },
+        {
+          "id": "interaction-distribution",
+          "query": "Show me the distribution of protein interactions by type",
+          "description": "Analyze interaction type frequencies",
+          "complexity": "advanced",
+          "tags": ["protein", "interaction", "analytics"]
+        }
+      ]
+    },
+    {
+      "id": "research-publications",
+      "name": "Research & Publications",
+      "description": "Explore research publications and GWAS studies",
+      "icon": "📚",
+      "order": 11,
+      "suggestions": [
+        {
+          "id": "protein-publications",
+          "query": "Which proteins are most frequently mentioned in publications?",
+          "description": "Find well-studied proteins",
+          "complexity": "intermediate",
+          "tags": ["protein", "publication", "analytics"]
+        },
+        {
+          "id": "gwas-studies",
+          "query": "Find GWAS studies and their associated traits",
+          "description": "Explore genome-wide association studies",
+          "complexity": "basic",
+          "tags": ["gwas", "trait"]
+        },
+        {
+          "id": "disease-research",
+          "query": "Show me publications about specific diseases",
+          "description": "Disease-focused research",
+          "complexity": "basic",
+          "tags": ["disease", "publication"]
+        },
+        {
+          "id": "gwas-diseases",
+          "query": "Find GWAS studies that study specific diseases",
+          "description": "Disease-focused GWAS",
+          "complexity": "intermediate",
+          "tags": ["gwas", "disease"]
+        }
+      ]
+    }
+  ]
+}

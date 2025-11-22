@@ -28,6 +28,7 @@ function App() {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [selectedRelationship, setSelectedRelationship] = useState<Relationship | null>(null);
   const [showStatistics, setShowStatistics] = useState(false);
+  const [activeQuery, setActiveQuery] = useState<string | null>(null);
 
   // Calculate available labels and node counts from graph data
   const { availableLabels, nodeCounts } = useMemo(() => {
@@ -161,10 +162,17 @@ function App() {
     }
   };
 
-  const handleSearch = async (query: string, type: 'natural' | 'cypher') => {
+  const handleSearch = async (query: string, type: 'natural' | 'cypher', fromSuggestion: boolean = false) => {
     try {
       setIsLoading(true);
       setError(null);
+
+      // Set active query if from suggestion, clear if manual input
+      if (fromSuggestion) {
+        setActiveQuery(query);
+      } else {
+        setActiveQuery(null);
+      }
 
       let cypherQuery = query;
 
@@ -369,6 +377,10 @@ function App() {
     });
   };
 
+  const handleQuerySelect = (query: string) => {
+    handleSearch(query, 'natural', true);
+  };
+
   return (
     <GraphProvider>
       {showStatistics ? (
@@ -418,6 +430,9 @@ function App() {
               selectedLabels={selectedLabels}
               onLabelToggle={handleLabelToggle}
               nodeCounts={nodeCounts}
+              onQuerySelect={handleQuerySelect}
+              isQueryExecuting={isLoading}
+              activeQuery={activeQuery}
             />
 
             <main className="content-panel">

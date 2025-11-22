@@ -23,6 +23,33 @@ vi.mock('../services', () => ({
   },
 }));
 
+// Mock the useQuerySuggestions hook
+vi.mock('../hooks/useQuerySuggestions', () => ({
+  useQuerySuggestions: () => ({
+    suggestions: [
+      {
+        id: 'basic-exploration',
+        name: 'Basic Exploration',
+        description: 'Simple queries to get started',
+        icon: '🔍',
+        order: 1,
+        suggestions: [
+          {
+            id: 'show-proteins',
+            query: 'Show me 20 proteins',
+            description: 'Display a sample of protein nodes',
+            complexity: 'basic',
+            tags: ['protein', 'basic'],
+          },
+        ],
+      },
+    ],
+    isLoading: false,
+    error: null,
+    reload: vi.fn(),
+  }),
+}));
+
 // Mock the NVL component to avoid canvas rendering issues in tests
 vi.mock('@neo4j-nvl/react', () => ({
   InteractiveNvlWrapper: ({ nodes, rels, mouseEventCallbacks }: any) => (
@@ -130,7 +157,8 @@ describe('App Integration Tests', () => {
       // Verify OpenAI service was called
       await waitFor(() => {
         expect(services.openAIService.generateCypherQuery).toHaveBeenCalledWith(
-          'Show me proteins related to cancer'
+          'Show me proteins related to cancer',
+          expect.any(String)
         );
       });
 
@@ -147,8 +175,11 @@ describe('App Integration Tests', () => {
       });
     });
 
-    it('should update GraphCanvas when Cypher query is executed directly', async () => {
+    it('should update GraphCanvas when natural language query is executed', async () => {
       const user = userEvent.setup();
+      const generatedCypher = 'MATCH (n:Gene) RETURN n LIMIT 10';
+      
+      vi.mocked(services.openAIService.generateCypherQuery).mockResolvedValue(generatedCypher);
       
       render(<App />);
 
@@ -157,23 +188,24 @@ describe('App Integration Tests', () => {
         expect(services.neo4jService.connect).toHaveBeenCalled();
       });
 
-      // Switch to Cypher mode
-      const cypherModeButton = screen.getByRole('button', { name: /cypher query/i });
-      await user.click(cypherModeButton);
-
-      // Enter Cypher query
-      const searchInput = screen.getByPlaceholderText(/enter cypher query/i);
+      // Enter natural language query
+      const searchInput = screen.getByPlaceholderText(/ask a question/i);
       const searchButton = screen.getByRole('button', { name: /search/i });
 
-      await user.type(searchInput, 'MATCH (n:Gene) RETURN n LIMIT 10');
+      await user.type(searchInput, 'Show me genes');
       await user.click(searchButton);
 
-      // Verify query was executed directly (no OpenAI call)
+      // Verify OpenAI was called to convert to Cypher
       await waitFor(() => {
-        expect(services.openAIService.generateCypherQuery).not.toHaveBeenCalled();
-        expect(services.neo4jService.executeQuery).toHaveBeenCalledWith(
-          'MATCH (n:Gene) RETURN n LIMIT 10'
+        expect(services.openAIService.generateCypherQuery).toHaveBeenCalledWith(
+          'Show me genes',
+          expect.any(String)
         );
+      });
+
+      // Verify Neo4j query was executed
+      await waitFor(() => {
+        expect(services.neo4jService.executeQuery).toHaveBeenCalledWith(generatedCypher);
       });
 
       // Verify graph canvas is updated
@@ -486,9 +518,171 @@ describe('App Integration Tests', () => {
     });
   });
 
+  describe('Query Suggestions Integration', () => {
+    it('should trigger search when clicking a query suggestion', async () => {
+      const user = userEvent.setup();
+      const generatedCypher = 'MATCH (n:Protein) RETURN n LIMIT 20';
+      
+      vi.mocked(services.openAIService.generateCypherQuery).mockResolvedValue(generatedCypher);
+      
+      render(<App />);
+
+      // Wait for initial load
+      await waitFor(() => {
+        expect(services.neo4jService.connect).toHaveBeenCalled();
+      });
+
+      // Find and click the "Suggested Queries" tab in the sidebar
+      const sidebar = screen.getByRole('complementary');
+      const queriesTab = within(sidebar).getByRole('tab', { name: /suggested queries/i });
+      await user.click(queriesTab);
+
+      // Wait for suggestions to load and find a query suggestion
+      const suggestion = await within(sidebar).findByText(/show me 20 proteins/i, {}, { timeout: 3000 });
+      await user.click(suggestion);
+
+      // Verify OpenAI service was called with the suggestion query
+      await waitFor(() => {
+        expect(services.openAIService.generateCypherQuery).toHaveBeenCalledWith(
+          'Show me 20 proteins',
+          expect.any(String)
+        );
+      });
+
+      // Verify Neo4j query was executed
+      await waitFor(() => {
+        expect(services.neo4jService.executeQuery).toHaveBeenCalledWith(generatedCypher);
+      });
+    });
+
+    it('should highlight active suggestion when clicked', async () => {
+      const user = userEvent.setup();
+      const generatedCypher = 'MATCH (n:Protein) RETURN n LIMIT 20';
+      
+      vi.mocked(services.openAIService.generateCypherQuery).mockResolvedValue(generatedCypher);
+      
+      render(<App />);
+
+      // Wait for initial load
+      await waitFor(() => {
+        expect(services.neo4jService.connect).toHaveBeenCalled();
+      });
+
+      // Navigate to Suggested Queries tab
+      const sidebar = screen.getByRole('complementary');
+      const queriesTab = within(sidebar).getByRole('tab', { name: /suggested queries/i });
+      await user.click(queriesTab);
+
+      // Find a query suggestion
+      const suggestion = await within(sidebar).findByText(/show me 20 proteins/i, {}, { timeout: 3000 });
+      const suggestionItem = suggestion.closest('.query-suggestion-item');
+      
+      // Click the suggestion
+      await user.click(suggestion);
+
+      // Verify it becomes active
+      await waitFor(() => {
+        expect(suggestionItem).toHaveClass('active');
+      });
+    });
+
+    it('should disable suggestions during query execution', async () => {
+      const user = userEvent.setup();
+      const generatedCypher = 'MATCH (n:Protein) RETURN n LIMIT 20';
+      
+      // Make the query execution take some time
+      vi.mocked(services.openAIService.generateCypherQuery).mockImplementation(
+        () => new Promise(resolve => setTimeout(() => resolve(generatedCypher), 100))
+      );
+      
+      render(<App />);
+
+      // Wait for initial load
+      await waitFor(() => {
+        expect(services.neo4jService.connect).toHaveBeenCalled();
+      });
+
+      // Navigate to Suggested Queries tab
+      const sidebar = screen.getByRole('complementary');
+      const queriesTab = within(sidebar).getByRole('tab', { name: /suggested queries/i });
+      await user.click(queriesTab);
+
+      // Find and click a query suggestion
+      const suggestion = await within(sidebar).findByText(/show me 20 proteins/i, {}, { timeout: 3000 });
+      await user.click(suggestion);
+
+      // Verify suggestions are disabled during execution
+      const suggestionItem = suggestion.closest('.query-suggestion-item');
+      await waitFor(() => {
+        expect(suggestionItem).toHaveClass('disabled');
+      });
+
+      // Wait for query to complete
+      await waitFor(() => {
+        expect(services.neo4jService.executeQuery).toHaveBeenCalled();
+      }, { timeout: 2000 });
+    });
+
+    it('should clear active suggestion when manual search is performed', async () => {
+      const user = userEvent.setup();
+      const generatedCypher1 = 'MATCH (n:Protein) RETURN n LIMIT 20';
+      const generatedCypher2 = 'MATCH (n:Gene) RETURN n';
+      
+      vi.mocked(services.openAIService.generateCypherQuery)
+        .mockResolvedValueOnce(generatedCypher1)
+        .mockResolvedValueOnce(generatedCypher2);
+      
+      render(<App />);
+
+      // Wait for initial load
+      await waitFor(() => {
+        expect(services.neo4jService.connect).toHaveBeenCalled();
+      });
+
+      // Navigate to Suggested Queries tab and click a suggestion
+      const sidebar = screen.getByRole('complementary');
+      const queriesTab = within(sidebar).getByRole('tab', { name: /suggested queries/i });
+      await user.click(queriesTab);
+
+      const suggestion = await within(sidebar).findByText(/show me 20 proteins/i, {}, { timeout: 3000 });
+      await user.click(suggestion);
+
+      // Wait for suggestion to become active
+      await waitFor(() => {
+        const suggestionItem = suggestion.closest('.query-suggestion-item');
+        expect(suggestionItem).toHaveClass('active');
+      });
+
+      // Perform a manual search
+      const searchInput = screen.getByPlaceholderText(/ask a question/i);
+      const searchButton = screen.getByRole('button', { name: /search/i });
+      
+      await user.clear(searchInput);
+      await user.type(searchInput, 'Find all genes');
+      await user.click(searchButton);
+
+      // Wait for the new query to execute
+      await waitFor(() => {
+        expect(services.openAIService.generateCypherQuery).toHaveBeenCalledWith(
+          'Find all genes',
+          expect.any(String)
+        );
+      });
+
+      // Verify active suggestion is cleared
+      await waitFor(() => {
+        const suggestionItem = suggestion.closest('.query-suggestion-item');
+        expect(suggestionItem).not.toHaveClass('active');
+      });
+    });
+  });
+
   describe('Combined Integration Scenarios', () => {
     it('should handle search followed by filtering', async () => {
       const user = userEvent.setup();
+      const generatedCypher = 'MATCH (n) RETURN n LIMIT 50';
+      
+      vi.mocked(services.openAIService.generateCypherQuery).mockResolvedValue(generatedCypher);
       
       render(<App />);
 
@@ -499,10 +693,7 @@ describe('App Integration Tests', () => {
 
       // Perform search
       const searchInput = screen.getByPlaceholderText(/ask a question/i);
-      const cypherModeButton = screen.getByRole('button', { name: /cypher query/i });
-      await user.click(cypherModeButton);
-      
-      await user.type(searchInput, 'MATCH (n) RETURN n LIMIT 50');
+      await user.type(searchInput, 'Show me all nodes');
       await user.click(screen.getByRole('button', { name: /search/i }));
 
       await waitFor(() => {
