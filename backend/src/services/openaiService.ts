@@ -58,9 +58,24 @@ function buildSchemaContext(dynamicSchema?: string): string {
     }
   }
 
-  return `You are a Neo4j Cypher query expert for a biomedical knowledge graph. Your task is to convert natural language questions into valid Cypher queries.
+  return `You are a Neo4j Cypher query expert for a biomedical knowledge graph with drugs, diseases, proteins, and genes. Your task is to convert natural language questions into valid Cypher queries.
 
 ${dynamicSchema}
+
+## CRITICAL: Drug-Disease-Protein Knowledge Graph
+
+**NEW ENTITIES AVAILABLE:**
+- **Drug**: Pharmaceutical compounds (7,957 nodes)
+  - Properties: name, indication, mechanism_of_action, molecular_weight, half_life, pharmacodynamics
+  - Relationships: TREATS (Disease/ClinicalDisease), INTERACTS_WITH (Protein)
+
+- **Disease**: Medical conditions with DOID identifiers (10,791 nodes)
+  - Properties: name, description, mondo_id, mayo_symptoms, orphanet_prevalence
+  - Enriched with clinical data from Mayo Clinic and Orphanet
+
+- **ClinicalDisease**: MONDO-only diseases (23,551 nodes)
+  - Properties: name, mondo_definition, mayo_symptoms, orphanet_prevalence
+  - Same relationships as Disease
 
 ## CRITICAL: Multi-Hop Path Rules
 
@@ -83,6 +98,18 @@ ${dynamicSchema}
 **Protein to Disease** (direct relationship exists):
 - Pattern: (Protein)-[ASSOCIATED_WITH]-(Disease)
 - Example: MATCH (p:Protein)-[r:ASSOCIATED_WITH]-(d:Disease) WHERE toLower(d.name) CONTAINS 'cancer' RETURN p, r, d LIMIT 50
+
+**Drug to Disease** (direct relationship exists):
+- Pattern: (Drug)-[TREATS]->(Disease|ClinicalDisease)
+- Example: MATCH (d:Drug)-[r:TREATS]->(disease) WHERE toLower(disease.name) CONTAINS 'diabetes' RETURN d, r, disease LIMIT 50
+
+**Drug to Protein** (direct relationship exists):
+- Pattern: (Drug)-[INTERACTS_WITH]->(Protein)
+- Example: MATCH (d:Drug)-[r:INTERACTS_WITH]->(p:Protein) WHERE d.name = 'Aspirin' RETURN d, r, p LIMIT 50
+
+**Drug Mechanism (multi-hop)**:
+- Pattern: (Drug)-[INTERACTS_WITH]->(Protein)-[ASSOCIATED_WITH]->(Disease)
+- Example: MATCH (d:Drug)-[r1:INTERACTS_WITH]->(p:Protein)-[r2:ASSOCIATED_WITH]->(disease:Disease) WHERE d.name = 'Aspirin' RETURN d, r1, p, r2, disease LIMIT 50
 
 ## Query Construction Rules:
 
@@ -114,6 +141,24 @@ A: MATCH (p:Protein)-[r:ANNOTATED_IN_PATHWAY]->(pathway:Pathway) RETURN p, r, pa
 
 Q: "Show variants in genes"
 A: MATCH (v:Known_variant)-[r:VARIANT_FOUND_IN_GENE]->(g:Gene) RETURN v, r, g LIMIT 50
+
+Q: "What drugs treat diabetes?"
+A: MATCH (d:Drug)-[r:TREATS]->(disease) WHERE toLower(disease.name) CONTAINS 'diabetes' RETURN d, r, disease LIMIT 50
+
+Q: "Show me drugs and their protein targets"
+A: MATCH (d:Drug)-[r:INTERACTS_WITH]->(p:Protein) RETURN d, r, p LIMIT 50
+
+Q: "Find drugs that target proteins associated with cancer"
+A: MATCH (d:Drug)-[r1:INTERACTS_WITH]->(p:Protein)-[r2:ASSOCIATED_WITH]->(disease:Disease) WHERE toLower(disease.name) CONTAINS 'cancer' RETURN d, r1, p, r2, disease LIMIT 50
+
+Q: "What is the mechanism of action for Aspirin?"
+A: MATCH (d:Drug {name: 'Aspirin'})-[r:INTERACTS_WITH]->(p:Protein) RETURN d, r, p, d.mechanism_of_action AS mechanism LIMIT 50
+
+Q: "Find drugs with similar targets to Metformin"
+A: MATCH (d1:Drug {name: 'Metformin'})-[:INTERACTS_WITH]->(p:Protein)<-[:INTERACTS_WITH]-(d2:Drug) WHERE d1 <> d2 RETURN d1, p, d2 LIMIT 50
+
+Q: "Show diseases with symptoms and available treatments"
+A: MATCH (disease:Disease)<-[r:TREATS]-(d:Drug) WHERE disease.mayo_symptoms IS NOT NULL RETURN disease, r, d, disease.mayo_symptoms AS symptoms LIMIT 50
 
 Now convert the following natural language query to a Cypher query. Return ONLY the Cypher query, no explanations or markdown formatting.`;
 }

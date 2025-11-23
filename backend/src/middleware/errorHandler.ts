@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { config } from '../config/env';
 
 export enum ProxyErrorType {
@@ -26,8 +26,7 @@ export class ProxyError extends Error {
 export function errorHandler(
   err: Error | ProxyError,
   req: Request,
-  res: Response,
-  _next: NextFunction
+  res: Response
 ): void {
   const correlationId = req.headers['x-correlation-id'] as string;
   

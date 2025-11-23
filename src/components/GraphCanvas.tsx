@@ -23,7 +23,6 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   nodes,
   relationships,
   onNodeClick,
-  onNodeDoubleClick,
   onRelationshipClick,
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);

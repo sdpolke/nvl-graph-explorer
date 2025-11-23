@@ -22,6 +22,11 @@ export const ErrorNotification: React.FC<ErrorNotificationProps> = ({
 }) => {
   const [isVisible, setIsVisible] = useState(false);
 
+  const handleClose = React.useCallback(() => {
+    setIsVisible(false);
+    setTimeout(onClose, 300);
+  }, [onClose]);
+
   useEffect(() => {
     if (error) {
       setIsVisible(true);
@@ -36,12 +41,7 @@ export const ErrorNotification: React.FC<ErrorNotificationProps> = ({
     } else {
       setIsVisible(false);
     }
-  }, [error, autoHideDuration]);
-
-  const handleClose = () => {
-    setIsVisible(false);
-    setTimeout(onClose, 300); // Wait for animation to complete
-  };
+  }, [error, autoHideDuration, handleClose]);
 
   if (!error) {
     return null;

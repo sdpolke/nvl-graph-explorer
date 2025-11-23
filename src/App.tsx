@@ -100,6 +100,7 @@ function App() {
       window.removeEventListener('beforeunload', handleUnload);
       // Don't disconnect here - let the driver persist for the app lifetime
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const initializeApp = async () => {

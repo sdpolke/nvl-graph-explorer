@@ -10,6 +10,13 @@
       "order": 1,
       "suggestions": [
         {
+          "id": "show-drugs",
+          "query": "Show me 20 drugs",
+          "description": "Display a sample of drug nodes",
+          "complexity": "basic",
+          "tags": ["drug", "basic"]
+        },
+        {
           "id": "show-proteins",
           "query": "Show me 20 proteins",
           "description": "Display a sample of protein nodes",
@@ -40,11 +47,69 @@
       ]
     },
     {
+      "id": "drug-discovery",
+      "name": "Drug Discovery & Therapeutics",
+      "description": "Explore drugs, their targets, and therapeutic applications",
+      "icon": "💊",
+      "order": 2,
+      "suggestions": [
+        {
+          "id": "drugs-for-disease",
+          "query": "What drugs treat diabetes?",
+          "description": "Find approved drugs for specific diseases",
+          "complexity": "basic",
+          "tags": ["drug", "disease", "treatment"]
+        },
+        {
+          "id": "drug-targets",
+          "query": "Show me drugs and their protein targets",
+          "description": "Explore drug-protein interactions",
+          "complexity": "intermediate",
+          "tags": ["drug", "protein", "target"]
+        },
+        {
+          "id": "drug-mechanism",
+          "query": "Find drugs that target proteins associated with cancer",
+          "description": "Discover drug mechanisms through protein targets",
+          "complexity": "advanced",
+          "tags": ["drug", "protein", "disease", "mechanism"]
+        },
+        {
+          "id": "drug-repurposing",
+          "query": "Find drugs targeting disease-associated proteins but not treating that disease",
+          "description": "Identify drug repurposing opportunities",
+          "complexity": "advanced",
+          "tags": ["drug", "repurposing", "protein", "disease"]
+        },
+        {
+          "id": "similar-drugs",
+          "query": "Find drugs with similar targets to Metformin",
+          "description": "Discover drugs with overlapping target profiles",
+          "complexity": "intermediate",
+          "tags": ["drug", "similarity", "target"]
+        },
+        {
+          "id": "multi-target-drugs",
+          "query": "Which drugs target more than 10 proteins?",
+          "description": "Find polypharmacological drugs",
+          "complexity": "intermediate",
+          "tags": ["drug", "polypharmacology", "analytics"]
+        },
+        {
+          "id": "drug-properties",
+          "query": "Show me drugs with their molecular weight and half-life",
+          "description": "Explore drug chemical and pharmacokinetic properties",
+          "complexity": "basic",
+          "tags": ["drug", "properties", "pharmacokinetics"]
+        }
+      ]
+    },
+    {
       "id": "protein-interactions",
       "name": "Protein Interactions",
       "description": "Explore protein-protein interaction networks",
       "icon": "🔗",
-      "order": 2,
+      "order": 3,
       "suggestions": [
         {
           "id": "protein-interactions",
@@ -88,8 +153,15 @@
       "name": "Disease & Biomarkers",
       "description": "Explore disease-protein relationships and biomarkers",
       "icon": "🏥",
-      "order": 3,
+      "order": 4,
       "suggestions": [
+        {
+          "id": "disease-treatments",
+          "query": "Show diseases with symptoms and available treatments",
+          "description": "Find diseases with clinical info and drug treatments",
+          "complexity": "intermediate",
+          "tags": ["disease", "drug", "symptoms", "treatment"]
+        },
         {
           "id": "disease-biomarkers",
           "query": "What proteins are biomarkers of diseases?",
@@ -103,6 +175,13 @@
           "description": "Explore disease-protein associations",
           "complexity": "intermediate",
           "tags": ["disease", "protein"]
+        },
+        {
+          "id": "disease-prevalence",
+          "query": "Find rare diseases with their prevalence information",
+          "description": "Explore disease prevalence from Orphanet",
+          "complexity": "basic",
+          "tags": ["disease", "prevalence", "rare"]
         },
         {
           "id": "pathology-proteins",
@@ -125,7 +204,7 @@
       "name": "Gene-Protein-Disease Pathways",
       "description": "Complex multi-hop queries across genes, proteins, and diseases",
       "icon": "🧬",
-      "order": 4,
+      "order": 5,
       "suggestions": [
         {
           "id": "gene-protein-disease-path",
@@ -169,7 +248,7 @@
       "name": "Variant Analysis",
       "description": "Explore genetic variants and their clinical relevance",
       "icon": "🧪",
-      "order": 5,
+      "order": 6,
       "suggestions": [
         {
           "id": "variant-clinical-relevance",
@@ -213,7 +292,7 @@
       "name": "Pathways & Metabolites",
       "description": "Explore biological pathways and metabolite networks",
       "icon": "⚗️",
-      "order": 6,
+      "order": 7,
       "suggestions": [
         {
           "id": "pathway-proteins",
@@ -257,7 +336,7 @@
       "name": "Multi-hop Traversals",
       "description": "Complex graph traversals across multiple relationship types",
       "icon": "🌐",
-      "order": 7,
+      "order": 8,
       "suggestions": [
         {
           "id": "disease-protein-biomarker-path",
@@ -308,7 +387,7 @@
       "name": "Protein Modifications",
       "description": "Explore post-translational modifications and modified proteins",
       "icon": "🔬",
-      "order": 8,
+      "order": 9,
       "suggestions": [
         {
           "id": "modified-proteins",
@@ -345,7 +424,7 @@
       "name": "Structure & Function",
       "description": "Explore protein structures and functional annotations",
       "icon": "🏗️",
-      "order": 9,
+      "order": 10,
       "suggestions": [
         {
           "id": "protein-structures",
@@ -389,7 +468,7 @@
       "name": "Network Analytics",
       "description": "Analytical queries to understand network topology and statistics",
       "icon": "📊",
-      "order": 10,
+      "order": 11,
       "suggestions": [
         {
           "id": "most-connected-proteins",
@@ -440,7 +519,7 @@
       "name": "Research & Publications",
       "description": "Explore research publications and GWAS studies",
       "icon": "📚",
-      "order": 11,
+      "order": 12,
       "suggestions": [
         {
           "id": "protein-publications",

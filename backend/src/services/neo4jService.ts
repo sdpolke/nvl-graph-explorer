@@ -552,6 +552,16 @@ export class Neo4jProxyService {
     schema += '- Use toLower() for case-insensitive text matching\n';
     schema += '- Always include LIMIT clause (default 50, max 100)\n';
     schema += '- Return both nodes and relationships for graph visualization\n';
+    schema += '\n### Key Entity Types:\n';
+    schema += '- **Drug**: Pharmaceutical compounds with properties like indication, mechanism_of_action, molecular_weight\n';
+    schema += '- **Disease/ClinicalDisease**: Medical conditions with symptoms, prevalence, and clinical information\n';
+    schema += '- **Protein**: Gene products that interact with drugs and are associated with diseases\n';
+    schema += '- **Gene**: Genetic elements that encode proteins\n';
+    schema += '\n### Common Query Patterns:\n';
+    schema += '- Drug-Disease: (Drug)-[:TREATS]->(Disease|ClinicalDisease)\n';
+    schema += '- Drug-Protein: (Drug)-[:INTERACTS_WITH]->(Protein)\n';
+    schema += '- Protein-Disease: (Protein)-[:ASSOCIATED_WITH]->(Disease)\n';
+    schema += '- Drug Mechanism: (Drug)-[:INTERACTS_WITH]->(Protein)-[:ASSOCIATED_WITH]->(Disease)\n';
 
     return schema;
   }
