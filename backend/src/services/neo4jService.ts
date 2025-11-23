@@ -61,6 +61,10 @@ export class Neo4jProxyService {
   private driver: Driver | null = null;
   private isConnected: boolean = false;
   private apocAvailable: boolean | null = null;
+  private schemaCache: { schema: SchemaResponse; timestamp: number } | null = null;
+  private readonly SCHEMA_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  private statsCache: Map<string, { data: any; timestamp: number }> = new Map();
+  private readonly STATS_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
 
   async connect(): Promise<void> {
     if (this.driver && this.isConnected) {
@@ -97,6 +101,8 @@ export class Neo4jProxyService {
         this.driver = null;
         this.isConnected = false;
         this.apocAvailable = null;
+        this.schemaCache = null;
+        this.statsCache.clear();
       }
     }
   }
@@ -176,6 +182,12 @@ export class Neo4jProxyService {
       throw new Error('Not connected to Neo4j database');
     }
 
+    // Check cache first
+    if (this.schemaCache && Date.now() - this.schemaCache.timestamp < this.SCHEMA_CACHE_TTL) {
+      console.log('✓ Using cached schema');
+      return this.schemaCache.schema;
+    }
+
     const session = this.driver.session();
     try {
       console.log('Fetching database schema...');
@@ -183,12 +195,12 @@ export class Neo4jProxyService {
       // Neo4j 5.26: Use db.labels() for node labels
       const labelsResult = await session.run('CALL db.labels()');
       const nodeLabels = labelsResult.records.map((record) => record.get(0));
-      console.log(`✓ Fetched ${nodeLabels.length} node labels:`, nodeLabels);
+      console.log(`✓ Fetched ${nodeLabels.length} node labels`);
 
       // Neo4j 5.26: Use db.relationshipTypes() for relationship types
       const relsResult = await session.run('CALL db.relationshipTypes()');
       const relationshipTypes = relsResult.records.map((record) => record.get(0));
-      console.log(`✓ Fetched ${relationshipTypes.length} relationship types:`, relationshipTypes);
+      console.log(`✓ Fetched ${relationshipTypes.length} relationship types`);
 
       // Neo4j 5.26: Use db.schema.nodeTypeProperties() for efficient property fetching
       const nodeProperties: Record<string, string[]> = {};
@@ -231,16 +243,110 @@ export class Neo4jProxyService {
         }
       }
 
-      // Neo4j 5.26: Use db.schema.visualization() for relationship patterns
-      const schemaResult = await session.run('CALL db.schema.visualization()');
-      const schema = this.formatSchema(nodeLabels, relationshipTypes, nodeProperties, schemaResult);
+      // Fetch actual relationship patterns by sampling the database
+      console.log('Fetching relationship patterns...');
+      const relationshipPatterns = await this.fetchRelationshipPatterns(session, relationshipTypes);
+      console.log(`✓ Fetched ${relationshipPatterns.length} relationship patterns`);
+
+      const schema = this.formatSchema(nodeLabels, relationshipTypes, nodeProperties, relationshipPatterns);
 
       console.log('✓ Schema formatted successfully');
 
-      return { nodeLabels, relationshipTypes, schema };
+      const schemaResponse = { nodeLabels, relationshipTypes, schema };
+      
+      // Cache the schema
+      this.schemaCache = {
+        schema: schemaResponse,
+        timestamp: Date.now()
+      };
+
+      return schemaResponse;
     } finally {
       await session.close();
     }
+  }
+
+  private async fetchRelationshipPatterns(
+    session: Session,
+    relationshipTypes: string[]
+  ): Promise<Array<{ startLabel: string; relType: string; endLabel: string; count: number }>> {
+    const patterns: Array<{ startLabel: string; relType: string; endLabel: string; count: number }> = [];
+    
+    // Try APOC meta.schema for fast pattern extraction
+    const hasApoc = await this.checkApocAvailability();
+    
+    if (hasApoc) {
+      try {
+        console.log('Using APOC meta.schema for fast pattern extraction');
+        const apocQuery = `
+          CALL apoc.meta.schema() YIELD value
+          UNWIND keys(value) AS nodeLabel
+          WITH nodeLabel, value[nodeLabel] AS nodeData
+          WHERE nodeData.relationships IS NOT NULL
+          UNWIND keys(nodeData.relationships) AS relKey
+          WITH nodeLabel, relKey, nodeData.relationships[relKey] AS relData
+          WHERE relData.direction = 'out'
+          UNWIND relData.labels AS targetLabel
+          WITH nodeLabel, relData.type AS relType, targetLabel, relData.count AS count
+          RETURN nodeLabel AS startLabel, relType, targetLabel AS endLabel, count
+          ORDER BY count DESC
+          LIMIT 100
+        `;
+        
+        const result = await session.run(apocQuery);
+        
+        result.records.forEach((record) => {
+          const startLabel = record.get('startLabel');
+          const relType = record.get('relType');
+          const endLabel = record.get('endLabel');
+          const count = this.convertValue(record.get('count'));
+          
+          if (startLabel && relType && endLabel) {
+            patterns.push({ startLabel, relType, endLabel, count });
+          }
+        });
+        
+        if (patterns.length > 0) {
+          console.log(`✓ Found ${patterns.length} relationship patterns using APOC`);
+          return patterns;
+        }
+      } catch (err) {
+        console.warn('APOC meta.schema failed, falling back to sampling:', err);
+      }
+    }
+    
+    // Fallback: Sample only the most important relationship types (limit to 10 for speed)
+    console.log('Using sampling approach (limited to 10 relationship types)');
+    const limitedTypes = relationshipTypes.slice(0, 10);
+    
+    for (const relType of limitedTypes) {
+      try {
+        const sampleQuery = `
+          MATCH (start)-[r:\`${relType}\`]->(end)
+          WITH labels(start)[0] AS startLabel, labels(end)[0] AS endLabel, count(*) AS count
+          RETURN startLabel, endLabel, count
+          ORDER BY count DESC
+          LIMIT 2
+        `;
+        
+        const result = await session.run(sampleQuery);
+        
+        result.records.forEach((record) => {
+          const startLabel = record.get('startLabel');
+          const endLabel = record.get('endLabel');
+          const count = this.convertValue(record.get('count'));
+          
+          if (startLabel && endLabel) {
+            patterns.push({ startLabel, relType, endLabel, count });
+          }
+        });
+      } catch (e) {
+        // Skip this relationship type if query fails
+      }
+    }
+    
+    console.log(`✓ Found ${patterns.length} relationship patterns from sampling`);
+    return patterns;
   }
 
   async getNodeStatistics(options?: { limit?: number; offset?: number }): Promise<NodeStatsResponse> {
@@ -248,13 +354,26 @@ export class Neo4jProxyService {
       throw new Error('Not connected to Neo4j database');
     }
 
-    const session = this.driver.session();
     const limit = options?.limit || 50;
     const offset = options?.offset || 0;
+    const cacheKey = `nodeStats_${limit}_${offset}`;
+    
+    // Check cache
+    const cached = this.statsCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < this.STATS_CACHE_TTL) {
+      console.log('✓ Using cached node statistics');
+      return { statistics: cached.data };
+    }
+
+    const session = this.driver.session();
 
     try {
       try {
         const statistics = await this.runOptimizedNodeStatisticsQuery(session, limit, offset);
+        
+        // Cache the result
+        this.statsCache.set(cacheKey, { data: statistics, timestamp: Date.now() });
+        
         return { statistics };
       } catch (optimizedError) {
         console.warn(
@@ -262,6 +381,10 @@ export class Neo4jProxyService {
           optimizedError instanceof Error ? optimizedError.message : optimizedError
         );
         const statistics = await this.runLegacyNodeStatisticsQuery(session, limit, offset);
+        
+        // Cache the result
+        this.statsCache.set(cacheKey, { data: statistics, timestamp: Date.now() });
+        
         return { statistics };
       }
     } finally {
@@ -279,49 +402,54 @@ export class Neo4jProxyService {
       offset: neo4j.int(offset),
     };
 
-    // Neo4j 5.26 optimized queries - ordered by performance
-    const optimizedQueries = [
-      {
-        name: 'DB_LABELS_WITH_COUNT',
-        cypher: `
-          CALL db.labels() YIELD label
-          CALL {
-            WITH label
-            MATCH (n)
-            WHERE label IN labels(n)
-            RETURN count(n) AS count
-          }
-          WITH label, count
+    // Try APOC first - it's 10-100x faster than per-label iteration
+    const hasApoc = await this.checkApocAvailability();
+    
+    if (hasApoc) {
+      try {
+        console.log('Using APOC meta.stats() for fast statistics query');
+        const result = await session.run(`
+          CALL apoc.meta.stats() YIELD labels
+          UNWIND keys(labels) AS label
+          WITH label, labels[label] AS count
           WHERE count > 0
           RETURN label, count
           ORDER BY count DESC
           SKIP $offset
           LIMIT $limit
-        `,
-      },
-    ];
-
-    let lastError: unknown = null;
-
-    for (const query of optimizedQueries) {
-      try {
-        const result = await session.run(query.cypher, params);
-
-        if (!result.records.length) {
-          return [];
+        `, params);
+        
+        if (result.records.length > 0) {
+          console.log(`✓ APOC query returned ${result.records.length} labels`);
+          return result.records.map((record) => ({
+            label: record.get('label'),
+            count: this.convertValue(record.get('count')),
+          }));
         }
-
-        return result.records.map((record) => ({
-          label: record.get('label'),
-          count: this.convertValue(record.get('count')),
-        }));
       } catch (error) {
-        lastError = `[${query.name}] ${error instanceof Error ? error.message : error}`;
-        console.warn(`Optimized query "${query.name}" failed:`, lastError);
+        console.warn('APOC meta.stats() failed, falling back to per-label query:', error);
       }
+    } else {
+      console.log('APOC not available, using per-label iteration query');
     }
-
-    throw lastError instanceof Error ? lastError : new Error(String(lastError));
+    
+    // Fallback: Single-pass aggregation (much faster than per-label iteration)
+    console.log('Using single-pass aggregation for statistics');
+    const result = await session.run(`
+      MATCH (n)
+      UNWIND labels(n) AS label
+      WITH label, count(*) AS count
+      WHERE count > 0
+      RETURN label, count
+      ORDER BY count DESC
+      SKIP $offset
+      LIMIT $limit
+    `, params);
+    
+    return result.records.map((record) => ({
+      label: record.get('label'),
+      count: this.convertValue(record.get('count')),
+    }));
   }
 
   private async runLegacyNodeStatisticsQuery(
@@ -329,40 +457,24 @@ export class Neo4jProxyService {
     limit: number,
     offset: number
   ): Promise<Array<{ label: string; count: number }>> {
-    const hasApoc = await this.checkApocAvailability();
     const params = {
       limit: neo4j.int(limit),
       offset: neo4j.int(offset),
     };
 
-    const apocQuery = `
-      CALL apoc.meta.stats() YIELD labels
-      UNWIND keys(labels) AS label
-      WITH label, labels[label] AS count
+    // Single-pass aggregation (same as optimized fallback)
+    console.log('Using single-pass aggregation (legacy fallback)');
+    const result = await session.run(`
+      MATCH (n)
+      UNWIND labels(n) AS label
+      WITH label, count(*) AS count
       WHERE count > 0
       RETURN label, count
       ORDER BY count DESC
       SKIP $offset
       LIMIT $limit
-    `;
-
-    const legacyQuery = hasApoc ? apocQuery : `
-      CALL db.labels() YIELD label
-      CALL {
-        WITH label
-        MATCH (n)
-        WHERE label IN labels(n)
-        RETURN count(n) AS count
-      }
-      WITH label, count
-      WHERE count > 0
-      RETURN label, count
-      ORDER BY count DESC
-      SKIP $offset
-      LIMIT $limit
-    `;
-
-    const result = await session.run(legacyQuery, params);
+    `, params);
+    
     return result.records.map((record) => ({
       label: record.get('label'),
       count: this.convertValue(record.get('count')),
@@ -477,6 +589,13 @@ export class Neo4jProxyService {
     }
   }
 
+  getDriver(): Driver {
+    if (!this.driver || !this.isConnected) {
+      throw new Error('Not connected to Neo4j database');
+    }
+    return this.driver;
+  }
+
   private async checkApocAvailability(): Promise<boolean> {
     if (this.apocAvailable !== null) {
       return this.apocAvailable;
@@ -506,7 +625,7 @@ export class Neo4jProxyService {
     nodeLabels: string[],
     relationshipTypes: string[],
     nodeProperties: Record<string, string[]>,
-    schemaResult: any
+    relationshipPatterns: Array<{ startLabel: string; relType: string; endLabel: string; count: number }>
   ): string {
     let schema = '## Actual Database Schema\n\n';
 
@@ -525,43 +644,42 @@ export class Neo4jProxyService {
       schema += `- ${type}\n`;
     });
 
-    if (schemaResult.records.length > 0) {
-      schema += '\n### Relationship Patterns:\n';
-      const record = schemaResult.records[0];
-      const nodes = record.get('nodes') || [];
-      const relationships = record.get('relationships') || [];
-
-      relationships.forEach((rel: any) => {
-        try {
-          const startNode = nodes.find((n: any) => n.identity.equals(rel.start));
-          const endNode = nodes.find((n: any) => n.identity.equals(rel.end));
-
-          if (startNode && endNode) {
-            const startLabel = startNode.labels?.[0] || 'Node';
-            const endLabel = endNode.labels?.[0] || 'Node';
-            schema += `- (${startLabel})-[${rel.type}]->(${endLabel})\n`;
-          }
-        } catch (e) {
-          // Skip unparseable relationships
+    // Add actual relationship patterns from the database
+    if (relationshipPatterns.length > 0) {
+      schema += '\n### Relationship Patterns (from actual data):\n';
+      
+      // Group patterns by relationship type for better readability
+      const patternsByType = new Map<string, Array<{ startLabel: string; endLabel: string; count: number }>>();
+      
+      relationshipPatterns.forEach(({ startLabel, relType, endLabel, count }) => {
+        if (!patternsByType.has(relType)) {
+          patternsByType.set(relType, []);
         }
+        patternsByType.get(relType)!.push({ startLabel, endLabel, count });
+      });
+      
+      // Sort by total count for each relationship type
+      const sortedTypes = Array.from(patternsByType.entries())
+        .sort((a, b) => {
+          const sumA = a[1].reduce((sum, p) => sum + p.count, 0);
+          const sumB = b[1].reduce((sum, p) => sum + p.count, 0);
+          return sumB - sumA;
+        });
+      
+      sortedTypes.forEach(([relType, patterns]) => {
+        patterns.forEach(({ startLabel, endLabel, count }) => {
+          schema += `- (${startLabel})-[:${relType}]->(${endLabel}) [${count.toLocaleString()} relationships]\n`;
+        });
       });
     }
 
     schema += '\n### Query Guidelines:\n';
     schema += '- Use the actual node labels and properties listed above\n';
+    schema += '- Use the relationship patterns shown above - these are REAL patterns from the database\n';
     schema += '- Use toLower() for case-insensitive text matching\n';
     schema += '- Always include LIMIT clause (default 50, max 100)\n';
     schema += '- Return both nodes and relationships for graph visualization\n';
-    schema += '\n### Key Entity Types:\n';
-    schema += '- **Drug**: Pharmaceutical compounds with properties like indication, mechanism_of_action, molecular_weight\n';
-    schema += '- **Disease/ClinicalDisease**: Medical conditions with symptoms, prevalence, and clinical information\n';
-    schema += '- **Protein**: Gene products that interact with drugs and are associated with diseases\n';
-    schema += '- **Gene**: Genetic elements that encode proteins\n';
-    schema += '\n### Common Query Patterns:\n';
-    schema += '- Drug-Disease: (Drug)-[:TREATS]->(Disease|ClinicalDisease)\n';
-    schema += '- Drug-Protein: (Drug)-[:INTERACTS_WITH]->(Protein)\n';
-    schema += '- Protein-Disease: (Protein)-[:ASSOCIATED_WITH]->(Disease)\n';
-    schema += '- Drug Mechanism: (Drug)-[:INTERACTS_WITH]->(Protein)-[:ASSOCIATED_WITH]->(Disease)\n';
+    schema += '- For multi-hop queries, chain the patterns shown above\n';
 
     return schema;
   }

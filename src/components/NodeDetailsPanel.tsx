@@ -17,8 +17,18 @@ export const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
     return null;
   }
 
+  // Filter out embedding properties (they're too large and not useful to display)
+  const filterProperties = (properties: Record<string, any>) => {
+    return Object.entries(properties).filter(([key]) => 
+      !key.toLowerCase().includes('embedding') && 
+      !key.toLowerCase().includes('vector')
+    );
+  };
+
   return (
-    <div className="node-details-panel">
+    <>
+      <div className="node-details-overlay" onClick={onClose} />
+      <div className="node-details-panel">
       <div className="details-header">
         <h4 className="details-title">
           {selectedNode ? 'Node Details' : 'Relationship Details'}
@@ -47,10 +57,10 @@ export const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
                 ))}
               </div>
             </div>
-            <div className="details-section">
+            <div className="details-section properties-section">
               <span className="details-label">Properties:</span>
-              <div className="details-properties">
-                {Object.entries(selectedNode.properties).map(([key, value]) => (
+              <div className="details-properties-grid">
+                {filterProperties(selectedNode.properties).map(([key, value]) => (
                   <div key={key} className="property-row">
                     <span className="property-key">{key}:</span>
                     <span className="property-value">{String(value)}</span>
@@ -78,10 +88,10 @@ export const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
               </span>
             </div>
             {Object.keys(selectedRelationship.properties).length > 0 && (
-              <div className="details-section">
+              <div className="details-section properties-section">
                 <span className="details-label">Properties:</span>
-                <div className="details-properties">
-                  {Object.entries(selectedRelationship.properties).map(([key, value]) => (
+                <div className="details-properties-grid">
+                  {filterProperties(selectedRelationship.properties).map(([key, value]) => (
                     <div key={key} className="property-row">
                       <span className="property-key">{key}:</span>
                       <span className="property-value">{String(value)}</span>
@@ -93,6 +103,7 @@ export const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
           </>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 };

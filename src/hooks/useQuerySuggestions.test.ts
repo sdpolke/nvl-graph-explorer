@@ -7,7 +7,7 @@ import type { QuerySuggestion, QuerySuggestionCategory } from '../types';
 describe('useQuerySuggestions', () => {
   beforeEach(() => {
     sessionStorage.clear();
-    global.fetch = vi.fn();
+    globalThis.fetch = vi.fn();
   });
 
   it('loads suggestions from JSON file', async () => {
@@ -30,7 +30,7 @@ describe('useQuerySuggestions', () => {
       ],
     };
 
-    (global.fetch as any).mockResolvedValueOnce({
+    (globalThis.fetch as any).mockResolvedValueOnce({
       ok: true,
       text: async () => JSON.stringify(mockData),
     });
@@ -49,7 +49,7 @@ describe('useQuerySuggestions', () => {
   });
 
   it('handles malformed JSON gracefully', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    (globalThis.fetch as any).mockResolvedValueOnce({
       ok: true,
       text: async () => 'invalid json {',
     });
@@ -65,7 +65,7 @@ describe('useQuerySuggestions', () => {
   });
 
   it('handles fetch errors gracefully', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    (globalThis.fetch as any).mockResolvedValueOnce({
       ok: false,
       status: 404,
       statusText: 'Not Found',
@@ -93,7 +93,7 @@ describe('useQuerySuggestions', () => {
       ],
     };
 
-    (global.fetch as any).mockResolvedValueOnce({
+    (globalThis.fetch as any).mockResolvedValueOnce({
       ok: true,
       text: async () => JSON.stringify(invalidData),
     });
@@ -128,7 +128,7 @@ describe('useQuerySuggestions', () => {
       ],
     };
 
-    (global.fetch as any).mockResolvedValueOnce({
+    (globalThis.fetch as any).mockResolvedValueOnce({
       ok: true,
       text: async () => JSON.stringify(mockData),
     });
@@ -139,7 +139,7 @@ describe('useQuerySuggestions', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
 
     unmount();
 
@@ -149,7 +149,7 @@ describe('useQuerySuggestions', () => {
       expect(result2.current.isLoading).toBe(false);
     });
 
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
     expect(result2.current.suggestions).toHaveLength(1);
   });
 
@@ -179,7 +179,7 @@ describe('useQuerySuggestions', () => {
       ],
     };
 
-    (global.fetch as any).mockResolvedValueOnce({
+    (globalThis.fetch as any).mockResolvedValueOnce({
       ok: true,
       text: async () => JSON.stringify(mockData),
     });
@@ -209,7 +209,7 @@ describe('useQuerySuggestions', () => {
       ],
     };
 
-    (global.fetch as any).mockResolvedValue({
+    (globalThis.fetch as any).mockResolvedValue({
       ok: true,
       text: async () => JSON.stringify(mockData),
     });
@@ -220,11 +220,11 @@ describe('useQuerySuggestions', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
 
     await result.current.reload();
 
-    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
   });
 
   /**
@@ -272,7 +272,7 @@ describe('useQuerySuggestions', () => {
         fc.asyncProperty(dataArb, async (mockData) => {
           sessionStorage.clear();
 
-          (global.fetch as any).mockResolvedValueOnce({
+          (globalThis.fetch as any).mockResolvedValueOnce({
             ok: true,
             text: async () => JSON.stringify(mockData),
           });

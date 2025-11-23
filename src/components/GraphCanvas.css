@@ -6,6 +6,12 @@
   border-radius: 4px;
   overflow: hidden;
   min-height: 500px;
+  transition: width 0.3s ease;
+}
+
+/* Adjust when chat is docked */
+.graph-canvas-container.chat-docked {
+  width: calc(100% - 400px);
 }
 
 /* Fullscreen mode */

@@ -8,3 +8,4 @@ export {
 
 export { ErrorHandler } from './ErrorHandler';
 export { debounce } from './debounce';
+export { parseEntityMentions, detectEntityMentions } from './entityMentionParser';

@@ -26,7 +26,8 @@ export class ProxyError extends Error {
 export function errorHandler(
   err: Error | ProxyError,
   req: Request,
-  res: Response
+  res: Response,
+  _next: any
 ): void {
   const correlationId = req.headers['x-correlation-id'] as string;
   

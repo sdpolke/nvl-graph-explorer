@@ -1,0 +1,135 @@
+.chat-interface {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-color, #ffffff);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.chat-interface--docked {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  height: 600px;
+  width: 400px;
+  border-radius: 8px 0 0 0;
+  z-index: 999;
+}
+
+.chat-interface--floating {
+  position: fixed;
+  min-width: 300px;
+  min-height: 400px;
+  max-width: 600px;
+  max-height: 80vh;
+  z-index: 1001;
+  cursor: move;
+}
+
+.chat-interface--floating .chat-header {
+  cursor: move;
+}
+
+.chat-interface--floating .chat-header button {
+  cursor: pointer;
+}
+
+.chat-interface--minimized {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--primary-color, #007bff);
+  color: white;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s, box-shadow 0.2s;
+  z-index: 999;
+}
+
+.chat-interface--minimized:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.chat-interface--minimized:focus {
+  outline: 2px solid var(--focus-color, #0056b3);
+  outline-offset: 2px;
+}
+
+.chat-interface__resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 50%, #ccc 50%);
+}
+
+.chat-interface__resize-handle:hover {
+  background: linear-gradient(135deg, transparent 50%, #999 50%);
+}
+
+@media (max-width: 768px) {
+  .chat-interface--docked {
+    width: 100%;
+  }
+  
+  .chat-interface--floating {
+    width: calc(100% - 40px) !important;
+    left: 20px !important;
+    right: 20px !important;
+  }
+}
+
+.chat-interface__error {
+  background: #fee;
+  border-left: 4px solid #c33;
+  color: #c33;
+  padding: 12px 16px;
+  margin: 8px;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  animation: slideDown 0.3s ease-out;
+}
+
+.chat-interface__error-close {
+  background: none;
+  border: none;
+  color: #c33;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.chat-interface__error-close:hover {
+  background: rgba(204, 51, 51, 0.1);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

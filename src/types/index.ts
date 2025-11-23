@@ -105,9 +105,11 @@ export interface GraphCanvasProps {
   nodes: Node[];
   relationships: Relationship[];
   onNodeClick: (node: Node) => void;
-  onNodeDoubleClick: (node: Node) => void;
+  onNodeExpand?: (node: Node) => void;
   onRelationshipClick: (rel: Relationship) => void;
   styleConfig: StyleConfiguration;
+  chatMode?: 'docked' | 'floating' | 'minimized';
+  chatHighlightedEntities?: Set<string>;
 }
 
 export interface SearchBarProps {

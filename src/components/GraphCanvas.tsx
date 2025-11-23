@@ -18,20 +18,42 @@ import './GraphCanvas.css';
  * - Dynamic styling based on entity types
  * - Fullscreen mode
  * - Fit to view functionality
+ * - Chat integration with viewport adjustment
  */
 export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   nodes,
   relationships,
   onNodeClick,
+  onNodeExpand,
   onRelationshipClick,
+  chatMode = 'minimized',
+  chatHighlightedEntities = new Set(),
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const nvlRef = useRef<NVL | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  // Transform nodes to NVL format with styling
+  const [canvasWidth, setCanvasWidth] = useState<number | undefined>(undefined);
+  // Adjust viewport width when chat is docked
+  useEffect(() => {
+    if (isFullscreen) {
+      // In fullscreen, always use full width
+      setCanvasWidth(undefined);
+    } else if (chatMode === 'docked') {
+      // Reduce canvas width by chat panel width (400px)
+      const chatWidth = 400;
+      setCanvasWidth(window.innerWidth - chatWidth);
+    } else {
+      // Restore full width when chat is minimized or floating
+      setCanvasWidth(undefined);
+    }
+  }, [chatMode, isFullscreen]);
+
+  // Transform nodes to NVL format with styling and highlighting
   const nvlNodes: NvlNode[] = useMemo(() => {
     const transformed = nodes.map(node => {
       const style = getNodeStyle(node);
+      const isHighlighted = chatHighlightedEntities.has(node.id);
+      
       // Prioritize common_name, then fall back to other properties
       const caption = 
         node.properties.common_name || 
@@ -43,8 +65,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       return {
         id: node.id,
         caption: String(caption),
-        size: style.size,
-        color: style.color,
+        size: isHighlighted ? style.size * 1.3 : style.size,
+        color: isHighlighted ? '#FFD700' : style.color, // Gold color for highlighted
         labels: node.labels,
       };
     });
@@ -53,7 +75,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     console.log('Sample nodes:', transformed.slice(0, 3));
     console.log('Node IDs:', transformed.slice(0, 5).map(n => n.id));
     return transformed;
-  }, [nodes]);
+  }, [nodes, chatHighlightedEntities]);
 
   // Transform relationships to NVL format with styling
   const nvlRelationships: NvlRelationship[] = useMemo(() => {
@@ -76,19 +98,54 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     return transformed;
   }, [relationships]);
 
+  // Track click state to distinguish between click and drag
+  const clickStateRef = useRef<{ nodeId: string | null; isDragging: boolean }>({
+    nodeId: null,
+    isDragging: false,
+  });
+
   // Mouse event callbacks for interactions
   const mouseEventCallbacks: MouseEventCallbacks = useMemo(() => ({
     // Enable pan and zoom
     onPan: true,
     onZoom: true,
     
-    // Handle node double-click - expand to show adjacent nodes
-    // Using double-click instead of single click to avoid conflict with dragging
+    // Handle node click - show properties modal (only if not dragging)
+    onNodeClick: (nvlNode) => {
+      // Only show modal if this was a pure click (not a drag)
+      if (!clickStateRef.current.isDragging) {
+        console.log('NVL node clicked (show properties):', nvlNode.id);
+        const node = nodes.find(n => n.id === nvlNode.id);
+        if (node) {
+          onNodeClick(node);
+        }
+      }
+      // Reset drag state
+      clickStateRef.current.isDragging = false;
+      clickStateRef.current.nodeId = null;
+    },
+    
+    // Track when dragging starts
+    onNodeDrag: (nvlNode: any) => {
+      if (clickStateRef.current.nodeId === nvlNode.id) {
+        clickStateRef.current.isDragging = true;
+      }
+    },
+    
+    // Track node mouse down to detect drag start
+    onNodeMouseDown: (nvlNode: any) => {
+      clickStateRef.current.nodeId = nvlNode.id;
+      clickStateRef.current.isDragging = false;
+    },
+    
+    // Handle node double-click - expand to show adjacent nodes (no modal)
     onNodeDoubleClick: (nvlNode) => {
       console.log('NVL node double-clicked (expand):', nvlNode.id);
+      // Prevent the modal from opening on double-click
+      clickStateRef.current.isDragging = true;
       const node = nodes.find(n => n.id === nvlNode.id);
-      if (node) {
-        onNodeClick(node);
+      if (node && onNodeExpand) {
+        onNodeExpand(node);
       }
     },
     
@@ -100,7 +157,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         onRelationshipClick(relationship);
       }
     },
-  }), [nodes, relationships, onNodeClick, onRelationshipClick]);
+  }), [nodes, relationships, onNodeClick, onNodeExpand, onRelationshipClick]);
 
   // NVL options configuration
   const nvlOptions = useMemo(() => ({
@@ -200,10 +257,13 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     }
   }, []);
 
+  const containerStyle = canvasWidth ? { width: `${canvasWidth}px` } : undefined;
+
   return (
     <div 
-      className={`graph-canvas-container ${isFullscreen ? 'fullscreen' : ''}`}
+      className={`graph-canvas-container ${isFullscreen ? 'fullscreen' : ''} ${chatMode === 'docked' ? 'chat-docked' : ''}`}
       ref={canvasRef}
+      style={containerStyle}
     >
       {nvlNodes.length === 0 ? (
         <div style={{

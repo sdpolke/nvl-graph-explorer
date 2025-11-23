@@ -10,6 +10,8 @@ import { Header } from './components/Header';
 import { AggregationResults } from './components/AggregationResults';
 import { StatisticsDashboard } from './components/StatisticsDashboard';
 import { NodeDetailsPanel } from './components/NodeDetailsPanel';
+import { ChatInterface, ChatToggleButton } from './components/chat';
+import type { ChatMode, EntityType, GraphData as ChatGraphData } from './components/chat/types';
 import { styleConfiguration } from './utils/styleConfig';
 import { neo4jService, openAIService } from './services';
 import type { Node, Relationship, GraphData } from './types';
@@ -29,6 +31,15 @@ function App() {
   const [selectedRelationship, setSelectedRelationship] = useState<Relationship | null>(null);
   const [showStatistics, setShowStatistics] = useState(false);
   const [activeQuery, setActiveQuery] = useState<string | null>(null);
+  const [chatOpen, setChatOpen] = useState(() => {
+    const saved = localStorage.getItem('chatOpen');
+    return saved ? JSON.parse(saved) : false;
+  });
+  const [chatMode, setChatMode] = useState<ChatMode>(() => {
+    const saved = localStorage.getItem('chatMode');
+    return (saved as ChatMode) || 'minimized';
+  });
+  const [chatHighlightedEntities, setChatHighlightedEntities] = useState<Set<string>>(new Set());
 
   // Calculate available labels and node counts from graph data
   const { availableLabels, nodeCounts } = useMemo(() => {
@@ -74,6 +85,15 @@ function App() {
     };
   }, [graphData, selectedLabels]);
 
+  // Persist chat state to localStorage
+  useEffect(() => {
+    localStorage.setItem('chatOpen', JSON.stringify(chatOpen));
+  }, [chatOpen]);
+
+  useEffect(() => {
+    localStorage.setItem('chatMode', chatMode);
+  }, [chatMode]);
+
   // Initialize Neo4j driver and load initial data on mount
   useEffect(() => {
     let cancelled = false;
@@ -112,20 +132,23 @@ function App() {
       await neo4jService.connect();
       console.log('Successfully connected to Neo4j database');
 
-      // Fetch database schema for OpenAI context
-      try {
-        const schemaInfo = await neo4jService.getSchema();
-        setDbSchema(schemaInfo.schema);
-        console.log('Fetched database schema:', schemaInfo.nodeLabels.length, 'labels,', schemaInfo.relationshipTypes.length, 'relationship types');
-      } catch (schemaErr) {
-        console.warn('Failed to fetch schema, will use default schema:', schemaErr);
-      }
-
-      // Load initial graph data with default query
+      // Load initial graph data immediately (don't wait for schema)
       await loadInitialData();
 
       // Clear any previous errors on successful load
       setError(null);
+      
+      // Fetch database schema in background for OpenAI context
+      // This is non-blocking so the UI shows immediately
+      neo4jService.getSchema()
+        .then(schemaInfo => {
+          setDbSchema(schemaInfo.schema);
+          console.log('✓ Schema loaded:', schemaInfo.nodeLabels.length, 'labels,', schemaInfo.relationshipTypes.length, 'types');
+        })
+        .catch(schemaErr => {
+          console.warn('Failed to fetch schema, will use default:', schemaErr);
+        });
+        
     } catch (err: any) {
       console.error('Failed to initialize application:', err);
       const errorMessage = err.message || 'Failed to connect to database. Please check your Neo4j connection.';
@@ -137,21 +160,18 @@ function App() {
 
   const loadInitialData = async () => {
     try {
-      // Load just one Protein node to start with
-      let data = await neo4jService.executeQuery(
-        'MATCH (n:Protein) RETURN n LIMIT 1'
-      );
-
-      // If no Protein nodes found, try to get any single node
-      if (data.nodes.length === 0) {
-        console.log('No Protein nodes found, trying to load any node...');
-        data = await neo4jService.executeQuery(
-          'MATCH (n) RETURN n LIMIT 1'
-        );
-      }
+      // Load a small sample of nodes with their immediate relationships
+      // This gives users something to see immediately
+      const data = await neo4jService.executeQuery(`
+        MATCH (n)
+        WITH n LIMIT 5
+        OPTIONAL MATCH (n)-[r]-(m)
+        RETURN n, r, m
+        LIMIT 20
+      `);
 
       setGraphData(data);
-      console.log(`Loaded ${data.nodes.length} initial node(s)`);
+      console.log(`Loaded ${data.nodes.length} nodes, ${data.relationships.length} relationships`);
 
       // Show a message if no data was found
       if (data.nodes.length === 0) {
@@ -266,12 +286,16 @@ function App() {
     }
   };
 
-  const handleNodeClick = async (node: Node) => {
-    console.log('Node clicked (expand):', node.id, node.properties.common_name || node.properties.name);
+  const handleNodeClick = (node: Node) => {
+    console.log('Node clicked (show properties):', node.id, node.properties.common_name || node.properties.name);
     
-    // Show node details
+    // Show node details modal
     setSelectedNode(node);
     setSelectedRelationship(null);
+  };
+
+  const handleNodeExpand = async (node: Node) => {
+    console.log('Node expand:', node.id, node.properties.common_name || node.properties.name);
     
     try {
       setIsLoading(true);
@@ -323,45 +347,6 @@ function App() {
     }
   };
 
-  const handleNodeDoubleClick = async (node: Node) => {
-    console.log('Node double-clicked (expand):', node);
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Fetch connected nodes and relationships
-      const expandedData = await neo4jService.expandNode(node.id);
-
-      // Prevent duplicate nodes from being added
-      const existingNodeIds = new Set(graphData.nodes.map(n => n.id));
-      const newNodes = expandedData.nodes.filter(n => !existingNodeIds.has(n.id));
-
-      // Prevent duplicate relationships from being added
-      const existingRelIds = new Set(graphData.relationships.map(r => r.id));
-      const newRels = expandedData.relationships.filter(r => !existingRelIds.has(r.id));
-
-      // Merge new nodes and relationships into existing graph data
-      setGraphData({
-        nodes: [...graphData.nodes, ...newNodes],
-        relationships: [...graphData.relationships, ...newRels],
-      });
-
-      // Log expansion results
-      console.log(`Expanded node ${node.id}: Added ${newNodes.length} nodes and ${newRels.length} relationships`);
-
-      // Show message if no new connections found
-      if (newNodes.length === 0 && newRels.length === 0) {
-        setError('No new connections found for this node.');
-      }
-    } catch (err: any) {
-      console.error('Failed to expand node:', err);
-      const errorMessage = err.message || 'Failed to expand node. Please try again.';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleRelationshipClick = (rel: Relationship) => {
     console.log('Relationship clicked:', rel);
     setSelectedRelationship(rel);
@@ -380,6 +365,103 @@ function App() {
 
   const handleQuerySelect = (query: string) => {
     handleSearch(query, 'natural', true);
+  };
+
+  const handleChatEntityClick = async (entityId: string, entityType: EntityType) => {
+    console.log('Chat entity clicked:', entityId, entityType);
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Load the entity and its neighbors
+      const expandedData = await neo4jService.expandNode(entityId);
+      
+      // Prevent duplicate nodes
+      const existingNodeIds = new Set(graphData.nodes.map(n => n.id));
+      const newNodes = expandedData.nodes.filter(n => !existingNodeIds.has(n.id));
+      
+      // Prevent duplicate relationships
+      const existingRelIds = new Set(graphData.relationships.map(r => r.id));
+      const newRels = expandedData.relationships.filter(r => !existingRelIds.has(r.id));
+      
+      // Merge into graph
+      setGraphData({
+        nodes: [...graphData.nodes, ...newNodes],
+        relationships: [...graphData.relationships, ...newRels],
+      });
+      
+      // Highlight the clicked entity
+      setChatHighlightedEntities(new Set([entityId]));
+      
+      // Switch to graph tab
+      setActiveTab('graph');
+      
+      console.log(`Loaded entity ${entityId}: Added ${newNodes.length} nodes and ${newRels.length} relationships`);
+    } catch (err: any) {
+      console.error('Failed to load entity from chat:', err);
+      setError(err.message || 'Failed to load entity');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleChatShowInGraph = (chatGraphData: ChatGraphData) => {
+    console.log('Show in graph:', chatGraphData);
+    
+    // Convert chat graph data to app graph data format
+    const convertedNodes: Node[] = chatGraphData.nodes.map(node => ({
+      id: node.id,
+      labels: node.labels,
+      properties: node.properties
+    }));
+    
+    const convertedRels: Relationship[] = chatGraphData.relationships.map(rel => ({
+      id: rel.id,
+      type: rel.type,
+      startNodeId: rel.startNodeId,
+      endNodeId: rel.endNodeId,
+      properties: rel.properties
+    }));
+    
+    // Prevent duplicates
+    const existingNodeIds = new Set(graphData.nodes.map(n => n.id));
+    const newNodes = convertedNodes.filter(n => !existingNodeIds.has(n.id));
+    
+    const existingRelIds = new Set(graphData.relationships.map(r => r.id));
+    const newRels = convertedRels.filter(r => !existingRelIds.has(r.id));
+    
+    // Merge into graph
+    setGraphData({
+      nodes: [...graphData.nodes, ...newNodes],
+      relationships: [...graphData.relationships, ...newRels],
+    });
+    
+    // Highlight all entities from chat
+    const entityIds = new Set(convertedNodes.map(n => n.id));
+    setChatHighlightedEntities(entityIds);
+    
+    // Switch to graph tab
+    setActiveTab('graph');
+    
+    console.log(`Loaded graph from chat: Added ${newNodes.length} nodes and ${newRels.length} relationships`);
+  };
+
+  const handleChatClose = () => {
+    setChatOpen(false);
+    setChatMode('minimized');
+  };
+
+  const handleChatToggle = () => {
+    setChatOpen(true);
+    setChatMode('docked');
+  };
+
+  const handleChatModeChange = (newMode: ChatMode) => {
+    setChatMode(newMode);
+    if (newMode === 'minimized') {
+      setChatOpen(false);
+    }
   };
 
   return (
@@ -460,9 +542,11 @@ function App() {
                         nodes={filteredGraphData.nodes}
                         relationships={filteredGraphData.relationships}
                         onNodeClick={handleNodeClick}
-                        onNodeDoubleClick={handleNodeDoubleClick}
+                        onNodeExpand={handleNodeExpand}
                         onRelationshipClick={handleRelationshipClick}
                         styleConfig={styleConfiguration}
+                        chatMode={chatMode}
+                        chatHighlightedEntities={chatHighlightedEntities}
                       />
                     </div>
                   </div>
@@ -479,6 +563,24 @@ function App() {
             <AggregationResults
               results={aggregationResults}
               onClose={() => setAggregationResults(null)}
+            />
+          )}
+          
+          {!chatOpen && (
+            <ChatToggleButton
+              onClick={handleChatToggle}
+              hasUnread={false}
+            />
+          )}
+          
+          {chatOpen && (
+            <ChatInterface
+              isOpen={chatOpen}
+              mode={chatMode}
+              onClose={handleChatClose}
+              onModeChange={handleChatModeChange}
+              onEntityClick={handleChatEntityClick}
+              onShowInGraph={handleChatShowInGraph}
             />
           )}
         </div>

@@ -13,6 +13,7 @@ import {
 import neo4jRoutes from './routes/neo4j';
 import openaiRoutes from './routes/openai';
 import healthRoutes from './routes/health';
+import chatRoutes from './routes/chat';
 
 const app: Application = express();
 
@@ -61,6 +62,7 @@ function registerMiddleware(app: Application): void {
 function registerRoutes(app: Application): void {
   app.use('/api/neo4j', neo4jRoutes);
   app.use('/api/openai', openaiRoutes);
+  app.use('/api/chat', chatRoutes);
   app.use(healthRoutes);
 }
 
@@ -78,7 +80,8 @@ async function startServer(): Promise<void> {
       console.log(`\n✓ Server running on port ${config.port}`);
       console.log(`✓ Health check: http://localhost:${config.port}/health`);
       console.log(`✓ Neo4j API: http://localhost:${config.port}/api/neo4j/*`);
-      console.log(`✓ OpenAI API: http://localhost:${config.port}/api/openai/*\n`);
+      console.log(`✓ OpenAI API: http://localhost:${config.port}/api/openai/*`);
+      console.log(`✓ Chat API: http://localhost:${config.port}/api/chat/*\n`);
     });
 
     const gracefulShutdown = async (signal: string) => {
